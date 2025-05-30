@@ -1,13 +1,18 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-
+interface UserResponse {
+    id: string;
+    email: string;
+    is_admin: boolean;
+    created_at: string; // 假设后端返回的是字符串类型的时间
+}
 interface LoginResponse {
   access_token: string
   token_type: string
-  user: {
-    id: string
-    email: string
-    is_admin: boolean
-  }
+  user: UserResponse
+}
+interface UserUpdate {
+    email?: string;
+    password?: string;
 }
 
 interface ScanTask {
@@ -138,6 +143,27 @@ class ApiService {
       return false
     }
   }
+ 
+    async getUsers(token: string): Promise<UserResponse[]> {
+        return this.request<UserResponse[]>("/users", {}, token);
+    }
+
+    async updateUser(user_id: string, user_data: UserUpdate, token: string): Promise<UserResponse> {
+        return this.request<UserResponse>(`/users/${user_id}`, {
+            method: "PUT",
+            body: JSON.stringify(user_data)
+        }, token);
+    }
+
+    async deleteUser(user_id: string, token: string): Promise<void> {
+        return this.request<void>(`/users/${user_id}`, {
+            method: "DELETE"
+        }, token);
+    }
 }
+
+
+
+
 
 export const apiService = new ApiService()

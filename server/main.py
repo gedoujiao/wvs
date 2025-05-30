@@ -64,9 +64,77 @@ async def get_current_user(
         )
     return user
 
+def model_to_dict(model):
+    """将 SQLAlchemy 模型实例转换为字典"""
+    data = {}
+    for column in model.__table__.columns:
+        value = getattr(model, column.name)
+        if isinstance(value, datetime):
+            # 处理日期时间类型
+            value = value.strftime("%Y-%m-%d %H:%M:%S")
+        data[column.name] = value
+    return data
+
 @app.get("/")
 async def root():
     return {"message": "Web漏洞挖掘系统API", "version": "1.0.0"}
+
+@app.get("/users", response_model=List[UserResponse])
+async def get_users(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="只有管理员可以访问用户列表"
+        )
+    users = db.query(User).all()
+    return [model_to_dict(user) for user in users]
+
+# 修改用户信息
+@app.put("/users/{user_id}", response_model=UserResponse)
+async def update_user(
+    user_id: str,
+    user_data: UserCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="只有管理员可以修改用户信息"
+        )
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户未找到"
+        )
+    user.email = user_data.email
+    user.hashed_password = get_password_hash(user_data.password)
+    db.commit()
+    db.refresh(user)
+    return model_to_dict(user)
+
+# 删除用户
+@app.delete("/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="只有管理员可以删除用户"
+        )
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户未找到"
+        )
+    db.delete(user)
+    db.commit()
+    return {"message": "用户删除成功"}
 
 # 用户认证相关接口
 @app.post("/register", response_model=UserResponse)
@@ -91,15 +159,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.refresh(user)
     
     logger.info(f"New user registered: {user.email}")
-    # 将用户对象转换为字典
-    user_dict = {
-        "id": str(user.id),
-        "email": user.email,
-        "is_admin": user.is_admin,
-        "created_at": user.created_at,
-        "updated_at": user.updated_at
-    }
-    return user_dict
+    return model_to_dict(user)
 
 @app.post("/login", response_model=Token)
 async def login(user_data: UserCreate, db: Session = Depends(get_db)):
@@ -116,14 +176,7 @@ async def login(user_data: UserCreate, db: Session = Depends(get_db)):
     
     logger.info(f"User logged in: {user.email}")
     
-    # 将用户对象转换为字典
-    user_dict = {
-        "id": str(user.id),
-        "email": user.email,
-        "is_admin": user.is_admin,
-        "created_at": user.created_at,
-        "updated_at": user.updated_at
-    }
+    user_dict = model_to_dict(user)
     
     return {
         "access_token": access_token,
@@ -133,7 +186,7 @@ async def login(user_data: UserCreate, db: Session = Depends(get_db)):
 
 @app.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
-    return current_user
+    return model_to_dict(current_user)
 
 # 扫描任务相关接口
 @app.post("/scan", response_model=ScanTaskResponse)
@@ -157,7 +210,7 @@ async def create_scan_task(
     asyncio.create_task(run_scan_task(task.id, db))
     
     logger.info(f"Scan task created: {task.id} for URL: {scan_data.url}")
-    return task
+    return model_to_dict(task)
 
 @app.get("/scans", response_model=List[ScanTaskResponse])
 async def get_scan_tasks(
@@ -165,7 +218,7 @@ async def get_scan_tasks(
     db: Session = Depends(get_db)
 ):
     tasks = db.query(ScanTask).filter(ScanTask.user_id == current_user.id).order_by(ScanTask.created_at.desc()).all()
-    return tasks
+    return [model_to_dict(task) for task in tasks]
 
 @app.get("/scan/{task_id}", response_model=ScanReportResponse)
 async def get_scan_report(
@@ -187,14 +240,10 @@ async def get_scan_report(
     # 获取漏洞列表
     vulnerabilities = db.query(Vulnerability).filter(Vulnerability.scan_task_id == task_id).all()
     
-    return {
-        "id": task.id,
-        "url": task.url,
-        "status": task.status,
-        "created_at": task.created_at,
-        "completed_at": task.completed_at,
-        "vulnerabilities": vulnerabilities
-    }
+    task_dict = model_to_dict(task)
+    task_dict["vulnerabilities"] = [model_to_dict(vuln) for vuln in vulnerabilities]
+    
+    return task_dict
 
 # 异步扫描任务执行
 async def run_scan_task(task_id: str, db: Session):
