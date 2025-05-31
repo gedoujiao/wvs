@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { apiService } from "@/lib/api"
@@ -30,6 +29,8 @@ export default function DashboardPage() {
   const [isScanning, setIsScanning] = useState(false)
   const [tasks, setTasks] = useState<ScanTask[]>([])
   const [isLoadingTasks, setIsLoadingTasks] = useState(true)
+  const [progressLogs, setProgressLogs] = useState<string[]>([])
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
 
   useEffect(() => {
     loadTasks()
@@ -37,7 +38,6 @@ export default function DashboardPage() {
 
   const loadTasks = async () => {
     if (!token) return
-
     try {
       const tasksData = await apiService.getScanTasks(token)
       setTasks(tasksData)
@@ -55,7 +55,6 @@ export default function DashboardPage() {
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!url || !token) return
-
     setIsScanning(true)
     try {
       const task = await apiService.createScanTask(url, token)
@@ -76,55 +75,57 @@ export default function DashboardPage() {
     }
   }
 
+  const loadProgressLogs = async (taskId: string) => {
+    if (!token) return
+    try {
+      const res = await fetch(`http://localhost:8000/scan/${taskId}/progress`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      setProgressLogs(data.logs || [])
+      setSelectedTaskId(taskId)
+    } catch (err) {
+      toast({
+        title: "读取失败",
+        description: "无法加载扫描进度日志",
+        variant: "destructive",
+      })
+    }
+  }
+
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "pending":
-        return <Clock className="h-4 w-4" />
-      case "running":
-        return <Loader2 className="h-4 w-4 animate-spin" />
-      case "completed":
-        return <CheckCircle className="h-4 w-4" />
-      case "failed":
-        return <XCircle className="h-4 w-4" />
-      default:
-        return <Clock className="h-4 w-4" />
+      case "pending": return <Clock className="h-4 w-4" />
+      case "running": return <Loader2 className="h-4 w-4 animate-spin" />
+      case "completed": return <CheckCircle className="h-4 w-4" />
+      case "failed": return <XCircle className="h-4 w-4" />
+      default: return <Clock className="h-4 w-4" />
     }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending":
-        return "secondary"
-      case "running":
-        return "default"
-      case "completed":
-        return "default"
-      case "failed":
-        return "destructive"
-      default:
-        return "secondary"
+      case "pending": return "secondary"
+      case "running": return "default"
+      case "completed": return "default"
+      case "failed": return "destructive"
+      default: return "secondary"
     }
   }
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "pending":
-        return "等待中"
-      case "running":
-        return "扫描中"
-      case "completed":
-        return "已完成"
-      case "failed":
-        return "失败"
-      default:
-        return status
+      case "pending": return "等待中"
+      case "running": return "扫描中"
+      case "completed": return "已完成"
+      case "failed": return "失败"
+      default: return status
     }
   }
 
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
@@ -144,7 +145,6 @@ export default function DashboardPage() {
         </header>
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Scan Form */}
           <Card className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -181,7 +181,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Tasks List */}
           <Card>
             <CardHeader>
               <CardTitle>扫描任务历史</CardTitle>
@@ -201,21 +200,22 @@ export default function DashboardPage() {
               ) : (
                 <div className="space-y-4">
                   {tasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-                    >
+                    <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3">
                           <div className="flex items-center space-x-2">
                             {getStatusIcon(task.status)}
-                            <Badge variant={getStatusColor(task.status) as any}>{getStatusText(task.status)}</Badge>
+                            <Badge variant={getStatusColor(task.status) as any}>
+                              {getStatusText(task.status)}
+                            </Badge>
                           </div>
                           <span className="font-medium">{task.url}</span>
                         </div>
                         <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
                           <span>创建时间: {new Date(task.created_at).toLocaleString()}</span>
-                          {task.completed_at && <span>完成时间: {new Date(task.completed_at).toLocaleString()}</span>}
+                          {task.completed_at && (
+                            <span>完成时间: {new Date(task.completed_at).toLocaleString()}</span>
+                          )}
                           {task.status === "completed" && (
                             <span className="flex items-center">
                               <AlertTriangle className="h-4 w-4 mr-1" />
@@ -233,6 +233,11 @@ export default function DashboardPage() {
                             </Button>
                           </Link>
                         )}
+                        {(task.status === "running" || task.status === "pending") && (
+                          <Button variant="ghost" size="sm" onClick={() => loadProgressLogs(task.id)}>
+                            查看进度
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -240,6 +245,26 @@ export default function DashboardPage() {
               )}
             </CardContent>
           </Card>
+
+          {selectedTaskId && (
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle>任务进度日志（任务 ID: {selectedTaskId}）</CardTitle>
+                <CardDescription>实时查看当前扫描流程日志</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {progressLogs.length === 0 ? (
+                  <p className="text-sm text-gray-500">暂无日志，请稍候...</p>
+                ) : (
+                  <div className="bg-black text-white p-4 text-sm rounded max-h-64 overflow-y-auto">
+                    {progressLogs.map((log, idx) => (
+                      <div key={idx}>{log}</div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </main>
       </div>
     </ProtectedRoute>

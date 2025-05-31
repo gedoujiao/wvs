@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 import asyncio
 import logging
-
+from passlib.context import CryptContext
 from database import get_db, engine, Base
 from auth.models import User
 from auth.schemas import UserCreate, UserResponse, Token
@@ -88,7 +88,7 @@ async def get_users(current_user: User = Depends(get_current_user), db: Session 
         )
     users = db.query(User).all()
     return [model_to_dict(user) for user in users]
-
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # 修改用户信息
 @app.put("/users/{user_id}", response_model=UserResponse)
 async def update_user(
@@ -108,8 +108,20 @@ async def update_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="用户未找到"
         )
+    # 验证邮箱格式
+    if not user_data.email or "@" not in user_data.email:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="邮箱格式不正确"
+        )
+    # 验证密码长度
+    if len(user_data.password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="密码长度不能少于6位"
+        )
     user.email = user_data.email
-    user.hashed_password = get_password_hash(user_data.password)
+    user.hashed_password = pwd_context.hash(user_data.password)
     db.commit()
     db.refresh(user)
     return model_to_dict(user)
@@ -138,7 +150,7 @@ async def delete_user(
 
 # 用户认证相关接口
 @app.post("/register", response_model=UserResponse)
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
+async def register(user_data: UserCreate, is_admin: bool = False, db: Session = Depends(get_db)):
     # 检查用户是否已存在
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
@@ -152,14 +164,22 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     user = User(
         email=user_data.email,
         hashed_password=hashed_password,
-        is_admin=False
+        is_admin=is_admin  # 根据参数设置是否为管理员
     )
     db.add(user)
     db.commit()
     db.refresh(user)
     
     logger.info(f"New user registered: {user.email}")
-    return model_to_dict(user)
+    # 将用户对象转换为字典
+    user_dict = {
+        "id": str(user.id),
+        "email": user.email,
+        "is_admin": user.is_admin,
+        "created_at": user.created_at,
+        "updated_at": user.updated_at
+    }
+    return user_dict
 
 @app.post("/login", response_model=Token)
 async def login(user_data: UserCreate, db: Session = Depends(get_db)):
@@ -245,23 +265,25 @@ async def get_scan_report(
     
     return task_dict
 
+scan_logs: dict[str, list[str]] = {}
+
 # 异步扫描任务执行
 async def run_scan_task(task_id: str, db: Session):
+    async def progress_logger(msg: str):
+        scan_logs.setdefault(task_id, []).append(msg)
+
     try:
-        # 获取任务
         task = db.query(ScanTask).filter(ScanTask.id == task_id).first()
         if not task:
             return
-        
-        # 更新状态为运行中
+
         task.status = "running"
         db.commit()
-        
-        # 执行扫描
+
         scanner = VulnerabilityScanner()
+        scanner.progress_callback = progress_logger
         vulnerabilities = await scanner.scan_website(task.url)
-        
-        # 保存漏洞结果
+
         for vuln_data in vulnerabilities:
             vulnerability = Vulnerability(
                 scan_task_id=task_id,
@@ -272,22 +294,20 @@ async def run_scan_task(task_id: str, db: Session):
                 severity=vuln_data["severity"]
             )
             db.add(vulnerability)
-        
-        # 更新任务状态
+
         task.status = "completed"
         task.completed_at = datetime.utcnow()
         task.vulnerabilities_count = len(vulnerabilities)
-        
+
         db.commit()
         logger.info(f"Scan task completed: {task_id}, found {len(vulnerabilities)} vulnerabilities")
-        
+
     except Exception as e:
-        # 更新任务状态为失败
         task = db.query(ScanTask).filter(ScanTask.id == task_id).first()
         if task:
             task.status = "failed"
             db.commit()
-        
+
         logger.error(f"Scan task failed: {task_id}, error: {str(e)}")
 
 if __name__ == "__main__":
