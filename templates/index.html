@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web漏洞扫描系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <h1>Web 漏洞扫描系统</h1>
+            <nav>
+                <ul>
+                    <li><a href="/">首页</a></li>
+                    <li><a href="/user">用户管理</a></li>
+                    <li><a href="/asset">资产检测</a></li>
+                    <li><a href="/scan">漏洞扫描</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <section class="section">
+            <h2>欢迎使用 Web 漏洞扫描系统</h2>
+            <p>本系统支持用户管理、资产检测、漏洞扫描与报告导出，并通过实时热图可视化漏洞分布，帮助您快速掌握网络安全态势。</p>
+        </section>
+
+        <section class="stats">
+            <div class="stat-card">
+                <h3>用户管理</h3>
+                <p class="stat-value">👤</p>
+                <p>管理系统用户及权限</p>
+                <a href="/user"><button class="btn-small">进入</button></a>
+            </div>
+
+            <div class="stat-card">
+                <h3>资产检测</h3>
+                <p class="stat-value">🧭</p>
+                <p>发现和管理网络资产</p>
+                <a href="/asset"><button class="btn-small">进入</button></a>
+            </div>
+
+            <div class="stat-card">
+                <h3>漏洞扫描</h3>
+                <p class="stat-value">🛡️</p>
+                <p>扫描漏洞并生成报告</p>
+                <a href="/scan"><button class="btn-small">进入</button></a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            &copy; 2025 Web Vulnerability Scanner | Designed for Security Teams
+        </div>
+    </footer>
+
+</body>
+</html>
