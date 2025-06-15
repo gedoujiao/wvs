@@ -1,65 +1,64 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web漏洞扫描系统</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="../static/style.css">
+    <script>
+        function logout() { 
+            alert("您已退出登录！");
+        }
+    </script>
 </head>
 <body>
+<div class="dashboard-container">
 
-    <!-- Header -->
-    <header>
-        <div class="container">
-            <h1>Web 漏洞扫描系统</h1>
-            <nav>
-                <ul>
-                    <li><a href="/">首页</a></li>
-                    <li><a href="/user">用户管理</a></li>
-                    <li><a href="/asset">资产检测</a></li>
-                    <li><a href="/scan">漏洞扫描</a></li>
-                </ul>
-            </nav>
+    <!-- 顶部横条 -->
+    <header class="topbar">
+        <div class="system-title">Web漏洞扫描系统</div>
+        <div class="user-box">
+            <div class="avatar-container">
+                <img src="../static/avatar.png" alt="头像" class="avatar">
+                <div class="user-tooltip">
+                    <p>用户名: 用户张三</p>
+                    <p>登录次数: 42</p>
+                    <p>最近登录: 2025-06-16 10:12</p>
+                    <p>权限等级: 系统管理员</p>
+                </div>
+            </div>
+            <span class="username">用户张三</span>
+            <button class="logout-btn" onclick="logout()">退出登录</button>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="container">
-        <section class="section">
-            <h2>欢迎使用 Web 漏洞扫描系统</h2>
-            <p>本系统支持用户管理、资产检测、漏洞扫描与报告导出，并通过实时热图可视化漏洞分布，帮助您快速掌握网络安全态势。</p>
-        </section>
+    <div class="body-wrapper">
+        <!-- 左侧功能导航 -->
+        <aside class="sidebar">
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active">💼 资产收集</a>
+                <a href="#" class="nav-item">🔍 漏洞扫描</a>
+                <a href="#" class="nav-item">📄 报告生成</a>
+                <a href="#" class="nav-item">📊 数据分析</a>
+            </nav>
+        </aside>
 
-        <section class="stats">
-            <div class="stat-card">
-                <h3>用户管理</h3>
-                <p class="stat-value">👤</p>
-                <p>管理系统用户及权限</p>
-                <a href="/user"><button class="btn-small">进入</button></a>
-            </div>
+        <!-- 内容区域 -->
+        <main class="main-panel">
+            <section class="data-panel">
+                <div class="left-content">
+                    <h2>漏洞扫描实时统计</h2>
+                    <div class="heatmap-placeholder">实时热力图展示</div>
+                    <div class="barchart-placeholder">风险柱状图展示</div>
+                </div>
 
-            <div class="stat-card">
-                <h3>资产检测</h3>
-                <p class="stat-value">🧭</p>
-                <p>发现和管理网络资产</p>
-                <a href="/asset"><button class="btn-small">进入</button></a>
-            </div>
+                <div class="right-realtime">
+                    <h3>实时扫描进度</h3>
+                    <div class="realtime-placeholder">正在实时扫描中...</div>
+                </div>
+            </section>
+        </main>
+    </div>
 
-            <div class="stat-card">
-                <h3>漏洞扫描</h3>
-                <p class="stat-value">🛡️</p>
-                <p>扫描漏洞并生成报告</p>
-                <a href="/scan"><button class="btn-small">进入</button></a>
-            </div>
-        </section>
-    </main>
-
-    <!-- Footer -->
-    <footer>
-        <div class="container">
-            &copy; 2025 Web Vulnerability Scanner | Designed for Security Teams
-        </div>
-    </footer>
-
+</div>
 </body>
 </html>
