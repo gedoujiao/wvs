@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>漏洞扫描 - Web漏洞扫描系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .scanner-panel {
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-form {
+            margin-bottom: 20px;
+        }
+
+        .upload-form input[type="file"] {
+            padding: 5px;
+        }
+
+        .upload-form button {
+            padding: 8px 15px;
+            background-color: #00bcd4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .scan-results {
+            margin-top: 20px;
+        }
+
+        .scan-results table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .scan-results th, .scan-results td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+
+        .scan-results th {
+            background-color: #f8f9fa;
+        }
+
+        .status-ok {
+            color: green;
+        }
+
+        .status-alert {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <!-- 顶部 -->
+    <header class="topbar">
+        <div class="system-title">Web漏洞扫描系统</div>
+        <div class="user-box">
+            <div class="avatar-container">
+                <img src="{{ url_for('static', filename='avatars/' + (avatar or 'avatar.png')) }}" alt="头像" class="avatar">
+                <div class="user-tooltip">
+                    <p>用户名: {{ username }}</p>
+                    <p>登录次数: {{ login_count }}</p>
+                    <p>最近登录: {{ last_login }}</p>
+                    <p>权限等级: {{ '管理员' if role == 'admin' else '普通用户' }}</p>
+                </div>
+            </div>
+            <span class="username">{{ username }}</span>
+            <button class="logout-btn" onclick="logout()">退出登录</button>
+        </div>
+    </header>
+
+    <!-- 主体 -->
+    <div class="body-wrapper">
+        <!-- 左侧导航栏 -->
+        <aside class="sidebar">
+            <nav class="nav-menu">
+                <a href="{{ url_for('index') }}" class="nav-item">  首页</a>
+                <a href="{{ url_for('asset.asset_page') }}" class="nav-item">💼 资产收集</a>
+                <a href="{{ url_for('scanner.scanner_home') }}" class="nav-item active">🔍 漏洞扫描</a>
+                <a href="#" class="nav-item">📄 报告生成</a>
+                <a href="#" class="nav-item">📊 数据分析</a>
+                <a href="{{ url_for('user.manage_users') }}" class="nav-item">👥 用户管理</a>
+            </nav>
+        </aside>
+
+        <!-- 内容 -->
+        <main class="main-panel">
+            <div class="scanner-panel">
+                <h2>上传域名列表（CSV 或 TXT）进行漏洞扫描</h2>
+                <form class="upload-form" method="POST" enctype="multipart/form-data">
+                    <input type="file" name="target_file" accept=".csv,.txt" required>
+                    <button type="submit">开始扫描</button>
+                </form>
+
+                {% if results %}
+                <div class="scan-results">
+                    <h3>扫描结果：</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>目标</th>
+                                <th>漏洞检测状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in results %}
+                            <tr>
+                                <td>{{ item.target }}</td>
+                                <td class="{{ 'status-alert' if '发现' in item.status else 'status-ok' }}">{{ item.status }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    function logout() {
+        if (confirm("确定要退出登录吗？")) {
+            window.location.href = "{{ url_for('user.logout') }}";
+        }
+    }
+</script>
+</body>
+</html>
