@@ -60,10 +60,45 @@ def fake_scan(domain):
         return "未发现已知漏洞"
 
 
-# 示例扩展 - 调用 Nuclei 工具扫描
+import subprocess
+
 def run_nuclei(domain):
+    nuclei_path = r"D:\tools\nuclei\nuclei.exe"
     try:
-        output = subprocess.check_output(['nuclei', '-u', domain], timeout=30)
-        return output.decode(errors='ignore')
+        result = subprocess.check_output(
+            [nuclei_path, "-u", domain, "-silent"],
+            stderr=subprocess.STDOUT,
+            timeout=30
+        )
+        return result.decode('utf-8') or "未发现漏洞"
+    except subprocess.TimeoutExpired:
+        return "Nuclei 扫描超时"
+    except subprocess.CalledProcessError as e:
+        return f"扫描失败: {e.output.decode('utf-8')}"
     except Exception as e:
-        return f"扫描失败: {str(e)}"
+        return f"系统错误: {str(e)}"
+    
+import subprocess
+import os
+import uuid
+
+def run_xray(domain):
+    xray_path = r"D:\tools\xray\xray.exe"
+    report_path = os.path.join("uploads", f"xray_report_{uuid.uuid4().hex}.html")
+
+    try:
+        result = subprocess.run(
+            [xray_path, "webscan", "--url", domain, "--html-output", report_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60
+        )
+        if os.path.exists(report_path):
+            return f"生成报告成功: {report_path}"
+        else:
+            return f"执行完成但未生成报告\n{result.stdout.decode('utf-8')}"
+    except subprocess.TimeoutExpired:
+        return "Xray 扫描超时"
+    except Exception as e:
+        return f"Xray 错误: {str(e)}"
+

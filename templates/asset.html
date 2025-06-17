@@ -1,148 +1,338 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>资产收集 - Web漏洞扫描系统</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        .asset-panel {
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .asset-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .target-box {
-            display: flex;
-            gap: 10px;
-        }
-
-        .target-box input {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            width: 300px;
-        }
-
-        .target-box button {
-            padding: 8px 15px;
-            background: #00bcd4;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .result-area {
-            margin-top: 20px;
-            white-space: pre-wrap;
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            font-family: monospace;
-            color: #333;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>资产收集 - Web漏洞扫描系统</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <style>
+    body {
+      background-color: #f4f6f8;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    .scanner-panel {
+      padding: 30px;
+      margin: 30px;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    .scanner-panel h2 {
+      font-size: 22px;
+      margin-bottom: 20px;
+      border-left: 5px solid #00bcd4;
+      padding-left: 10px;
+    }
+    .form-section {
+      margin-bottom: 20px;
+    }
+    input[type="file"],
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-size: 14px;
+      transition: border 0.3s ease;
+    }
+    textarea {
+      height: 150px;
+      resize: vertical;
+    }
+    button {
+      background-color: #00bcd4;
+      color: white;
+      padding: 10px 20px;
+      font-size: 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .progress-bar {
+      height: 22px;
+      background-color: #e0e0e0;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 15px;
+      margin-bottom: 20px;
+    }
+    .progress-bar-inner {
+      height: 100%;
+      background-color: #00bcd4;
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+    .result-box {
+      background-color: #fafafa;
+      border: 1px solid #eee;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    .port-table table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    .port-table th,
+    .port-table td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+    }
+    .port-table th {
+      background-color: #f7f7f7;
+    }
+    .port-open {
+      color: green;
+      font-weight: bold;
+    }
+    .port-closed {
+      color: gray;
+    }
+    .csv-table th,
+    .csv-table td {
+      padding: 8px;
+      border: 1px solid #ccc;
+    }
+    .logout-btn {
+      background-color: #f44336;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
 <div class="dashboard-container">
-    <!-- 顶部横条 -->
-    <header class="topbar">
-        <div class="system-title">Web漏洞扫描系统</div>
-        <div class="user-box">
-            <div class="avatar-container">
-                <img src="{{ url_for('static', filename='avatars/' + (avatar or 'avatar.png')) }}" alt="头像" class="avatar">
-                <div class="user-tooltip">
-                    <p>用户名: {{ username }}</p>
-                    <p>登录次数: {{ login_count }}</p>
-                    <p>最近登录: {{ last_login }}</p>
-                    <p>权限等级: {{ '管理员' if role == 'admin' else '普通用户' }}</p>
-                </div>
-            </div>
-            <span class="username">{{ username }}</span>
-            <button class="logout-btn" onclick="logout()">退出登录</button>
+  <header class="topbar">
+    <div class="system-title">Web漏洞扫描系统</div>
+    <div class="user-box">
+      <div class="avatar-container">
+        <img src="{{ url_for('static', filename='avatars/' + (avatar or 'avatar.png')) }}" alt="头像" class="avatar">
+        <div class="user-tooltip">
+          <p>用户名: {{ username }}</p>
+          <p>登录次数: {{ login_count }}</p>
+          <p>最近登录: {{ last_login }}</p>
+          <p>权限等级: {{ '管理员' if role == 'admin' else '普通用户' }}</p>
         </div>
-    </header>
-
-    <div class="body-wrapper">
-        <!-- 左侧导航栏 -->
-        <aside class="sidebar">
-            <nav class="nav-menu">
-                <a href="{{ url_for('index') }}" class="nav-item">  首页</a>
-                <a href="{{ url_for('asset.asset_page') }}" class="nav-item active">💼 资产收集</a>
-                <a href="#" class="nav-item">🔍 漏洞扫描</a>
-                <a href="#" class="nav-item">📄 报告生成</a>
-                <a href="#" class="nav-item">📊 数据分析</a>
-                <a href="{{ url_for('user.manage_users') }}" class="nav-item">👥 用户管理</a>
-            </nav>
-        </aside>
-
-        <!-- 内容区域 -->
-        <main class="main-panel">
-            <div class="asset-panel">
-                <div class="asset-header">
-                    <h2>资产收集</h2>
-                    <div class="target-box">
-                        <input type="text" id="targetInput" placeholder="请输入 IP 或域名">
-                        <button onclick="collectAsset()">开始收集</button>
-                    </div>
-                </div>
-
-                <div id="resultBox" class="result-area">等待输入目标后点击收集按钮...</div>
-            </div>
-        </main>
+      </div>
+      <span class="username">{{ username }}</span>
+      <button class="logout-btn" onclick="logout()">退出登录</button>
     </div>
+  </header>
+
+  <div class="body-wrapper">
+    <aside class="sidebar">
+      <nav class="nav-menu">
+        <a href="{{ url_for('index') }}" class="nav-item">🏠 首页</a>
+        <a href="{{ url_for('asset.asset_page') }}" class="nav-item active">💼 资产收集</a>
+        <a href="{{ url_for('scanner.scanner_home') }}" class="nav-item">🔍 漏洞扫描</a>
+        <a href="#" class="nav-item">📄 报告生成</a>
+        <a href="#" class="nav-item">📊 数据分析</a>
+        <a href="{{ url_for('user.manage_users') }}" class="nav-item">👥 用户管理</a>
+      </nav>
+    </aside>
+
+    <main class="main-panel">
+      <div class="scanner-panel">
+        <h2>🧭 资产收集</h2>
+
+        <div class="form-section">
+          <label>上传 TXT / CSV 文件</label>
+          <input type="file" id="fileInput" accept=".txt,.csv" />
+          <small style="color: #666;">上传后将自动填充到下方文本框</small>
+        </div>
+
+        <div class="form-section">
+          <label>输入目标（可手动编辑）</label>
+          <textarea id="targetInput" placeholder="example.com, 8.8.8.8 或每行一个目标"></textarea>
+        </div>
+
+        <div class="form-section">
+          <button onclick="startCollection()">开始资产收集</button>
+        </div>
+
+        <div class="progress-bar">
+          <div class="progress-bar-inner" id="progressInner"></div>
+        </div>
+
+        <div id="result" class="result-section"></div>
+        <div id="csvTableContainer" class="result-section"></div>
+        <div style="margin-top: 10px;">
+          <button onclick="downloadCSV(false)">下载完整 CSV</button>
+          <button onclick="downloadCSV(true)">仅下载 IP 列</button>
+        </div>
+      </div>
+    </main>
+  </div>
 </div>
 
 <script>
-    function logout() {
-        if (confirm("确定要退出登录吗？")) {
-            window.location.href = "{{ url_for('user.logout') }}";
-        }
+function logout() {
+  if (confirm("确认退出登录？")) {
+    window.location.href = "{{ url_for('user.logout') }}";
+  }
+}
+
+document.getElementById('fileInput').addEventListener('change', async function () {
+  const file = this.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch("{{ url_for('asset.upload_file') }}", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await res.json();
+  if (data.status === "success") {
+    document.getElementById("targetInput").value = data.targets.join("\n");
+  } else {
+    alert("文件读取失败：" + data.message);
+  }
+});
+
+async function startCollection() {
+  const raw = document.getElementById("targetInput").value.trim();
+  const targets = raw.split(/[\n,，]+/).map(t => t.trim()).filter(Boolean);
+  if (targets.length === 0) {
+    alert("请上传文件或填写目标后再开始收集");
+    return;
+  }
+
+  const response = await fetch("{{ url_for('asset.collect') }}", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ targets })
+  });
+
+  const data = await response.json();
+  if (data.status !== "pending") {
+    alert("任务启动失败：" + data.message);
+    return;
+  }
+
+  pollProgress(data.task_id);
+}
+
+async function pollProgress(taskId) {
+  const resultDiv = document.getElementById("result");
+  const bar = document.getElementById("progressInner");
+  resultDiv.innerHTML = "<p>🔄 正在收集资产，请稍候...</p>";
+  bar.style.width = "0%";
+
+  const interval = setInterval(async () => {
+    const res = await fetch(`/asset/progress/${taskId}`);
+    const data = await res.json();
+
+    if (data.status === "working") {
+      const percent = Math.round(data.current / data.total * 100);
+      bar.style.width = percent + "%";
+    } else if (data.status === "done") {
+      clearInterval(interval);
+      bar.style.width = "100%";
+
+      const assets = data.assets;
+      window.latestAssets = assets;
+
+      const html = assets.map(r => `
+        <div class="result-box">
+          <strong>域名：</strong>${r.domain}<br>
+          <strong>IP：</strong>${r.ip || '无法解析'}<br>
+          <strong>WHOIS：</strong>${r.whois?.org || '未知'} / ${r.whois?.email || '无'} / ${r.whois?.creation_date || '无'}<br>
+          <strong>IP信息：</strong>${r.ip_info?.org || '无'} (${r.ip_info?.country || '无'}) ASN: ${r.ip_info?.asn || '无'}<br>
+          <strong>开放端口：</strong>
+          <div class="port-table">${formatPortsAsTable(r.ports)}</div>
+        </div>
+      `).join("");
+
+      resultDiv.innerHTML = html;
+      renderCSVTable(assets);
+    } else {
+      clearInterval(interval);
+      alert("任务失败：" + data.message);
     }
+  }, 1000);
+}
 
-    function collectAsset() {
-        const target = document.getElementById('targetInput').value.trim();
-        const resultBox = document.getElementById('resultBox');
+function formatPortsAsTable(rawText) {
+  if (!rawText || !rawText.includes("PORT")) {
+    return `<pre>${rawText || "无数据"}</pre>`;
+  }
 
-        if (!target) {
-            alert("请输入有效的目标");
-            return;
-        }
+  const lines = rawText.split("\n").filter(line => line.trim());
+  const headerIndex = lines.findIndex(line => line.includes("PORT"));
+  if (headerIndex === -1) return `<pre>${rawText}</pre>`;
 
-        resultBox.textContent = "正在收集资产，请稍候...";
+  const dataLines = lines.slice(headerIndex + 1);
+  const rows = dataLines.map(line => {
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 3) return "";
+    const [port, state, ...serviceParts] = parts;
+    const service = serviceParts.join(" ");
+    const stateClass = state === "open" ? "port-open" : "port-closed";
+    return `<tr><td>${port}</td><td class="${stateClass}">${state}</td><td>${service}</td></tr>`;
+  }).join("");
 
-        fetch("{{ url_for('asset.collect') }}", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ target: target })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === "success") {
-                let output = `✅ 收集成功：目标 ${data.target}\n\n`;
-                for (const asset of data.assets) {
-                    output += `【${asset.type}】${asset.value}\n`;
-                    if (asset.ip) output += `IP: ${asset.ip}\n`;
-                    output += `摘要: ${asset.scan.split('\\n')[0]}\n\n`;
-                }
-                resultBox.textContent = output;
-            } else {
-                resultBox.textContent = "❌ 发生错误：" + data.message;
-            }
-        })
-        .catch(err => {
-            resultBox.textContent = "请求失败：" + err.message;
-        });
-    }
+  return `
+    <table>
+      <thead><tr><th>端口</th><th>状态</th><th>服务</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function renderCSVTable(assets) {
+  if (!assets.length) return;
+  const headers = ["域名", "IP", "WHOIS-组织", "WHOIS-邮箱", "WHOIS-注册时间", "ASN", "组织", "国家", "开放端口"];
+  let html = `<table class="csv-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>`;
+  for (let r of assets) {
+    html += `<tr>
+      <td>${r.domain || ""}</td>
+      <td>${r.ip || ""}</td>
+      <td>${r.whois?.org || ""}</td>
+      <td>${r.whois?.email || ""}</td>
+      <td>${r.whois?.creation_date || ""}</td>
+      <td>${r.ip_info?.asn || ""}</td>
+      <td>${r.ip_info?.org || ""}</td>
+      <td>${r.ip_info?.country || ""}</td>
+      <td><pre style="white-space:pre-wrap;">${r.ports || ""}</pre></td>
+    </tr>`;
+  }
+  html += "</tbody></table>";
+  document.getElementById("csvTableContainer").innerHTML = html;
+}
+
+async function downloadCSV(onlyIP) {
+  const response = await fetch("{{ url_for('asset.download_csv') }}", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      assets: window.latestAssets || [],
+      only_ip: onlyIP
+    })
+  });
+
+  if (!response.ok) {
+    alert("下载失败");
+    return;
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = onlyIP ? "ips_only.csv" : "full_asset_results.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
 </script>
 </body>
 </html>
