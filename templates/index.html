@@ -4,6 +4,37 @@
     <meta charset="UTF-8">
     <title>Web漏洞扫描系统</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .manual-content {
+            padding: 30px;
+            background-color: #fff;
+            margin: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            line-height: 1.8;
+        }
+        .manual-content h2 {
+            font-size: 20px;
+            margin-top: 20px;
+            color: #00bcd4;
+        }
+        .manual-content p {
+            margin: 10px 0;
+            color: #555;
+        }
+        .manual-content ul {
+            margin-left: 20px;
+            list-style: disc;
+        }
+        .manual-content blockquote {
+            background: #f8f8f8;
+            border-left: 5px solid #00bcd4;
+            padding: 10px 15px;
+            margin: 10px 0;
+            color: #444;
+        }
+    </style>
     <script>
         function logout() {
             if (confirm("确定要退出登录吗？")) {
@@ -37,7 +68,7 @@
         <!-- 左侧功能导航 -->
         <aside class="sidebar">
             <nav class="nav-menu">
-                <a href="{{ url_for('index') }}" class="nav-item">🏠 首页</a>
+                <a href="{{ url_for('index') }}" class="nav-item active">🏠 首页</a>
                 <a href="{{ url_for('asset.asset_page') }}" class="nav-item">💼 资产收集</a>
                 <a href="{{ url_for('scanner.scanner_home') }}" class="nav-item">🔍 漏洞扫描</a>
                 <a href="#" class="nav-item">📄 报告生成</a>
@@ -48,18 +79,25 @@
 
         <!-- 内容区域 -->
         <main class="main-panel">
-            <section class="data-panel">
-                <div class="left-content">
-                    <h2>漏洞扫描实时统计</h2>
-                    <div class="heatmap-placeholder">实时热力图展示</div>
-                    <div class="barchart-placeholder">风险柱状图展示</div>
-                </div>
+            <div class="manual-content">
+                <h2>📘 操作手册</h2>
 
-                <div class="right-realtime">
-                    <h3>实时扫描进度</h3>
-                    <div class="realtime-placeholder">正在实时扫描中...</div>
-                </div>
-            </section>
+                <h2>资产收集</h2>
+                <blockquote>收集目标的域名、子域名、开放端口、邮箱等信息</blockquote>
+                <ul>
+                    <li>手动输入目标 IP 或者域名 / 上传 IP、域名的 CSV 或 TXT 文件</li>
+                    <li>点击开始收集</li>
+                    <li>输出相关资产的表格，支持下载 CSV、或者纯 IP 地址 CSV</li>
+                </ul>
+
+                <h2>漏洞扫描</h2>
+                <blockquote>对目标进行漏洞扫描（使用 Nuclei 的开源 POC）</blockquote>
+                <ul>
+                    <li>手动输入目标 IP 或者域名 / 上传 IP、域名的 CSV 或 TXT 文件</li>
+                    <li>点击开始扫描</li>
+                    <li>输出相关漏洞的表格，支持下载 CSV、或者纯 IP 地址 CSV</li>
+                </ul>
+            </div>
         </main>
     </div>
 
