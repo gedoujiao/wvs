@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - Web漏洞扫描系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .register-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+        }
+        
+        .register-box {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 400px;
+            text-align: center;
+        }
+        
+        .register-title {
+            color: #223144;
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .register-form .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .register-form label {
+            display: block;
+            margin-bottom: 8px;
+            color: #223144;
+            font-weight: 500;
+        }
+        
+        .register-form input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .register-form input:focus {
+            border-color: #00bcd4;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.2);
+        }
+        
+        .btn-register {
+            width: 100%;
+            padding: 12px;
+            background: #00bcd4;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: bold;
+        }
+        
+        .btn-register:hover {
+            background: #0097a7;
+        }
+        
+        .register-links {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .register-links a {
+            color: #00bcd4;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .register-links a:hover {
+            color: #0097a7;
+            text-decoration: underline;
+        }
+        
+        .logo {
+            margin-bottom: 20px;
+            font-size: 48px;
+            color: #00bcd4;
+        }
+        
+        .password-strength {
+            height: 5px;
+            background: #eee;
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .strength-meter {
+            height: 100%;
+            width: 0;
+            background: #ff5252;
+            transition: width 0.3s, background 0.3s;
+        }
+    </style>
+    <script>
+        function checkPasswordStrength() {
+            const password = document.getElementById('password').value;
+            const meter = document.querySelector('.strength-meter');
+            let strength = 0;
+            
+            if (password.length > 5) strength += 25;
+            if (password.length > 7) strength += 25;
+            if (/[A-Z]/.test(password)) strength += 25;
+            if (/[0-9]/.test(password)) strength += 25;
+            
+            meter.style.width = strength + '%';
+            
+            if (strength < 50) meter.style.background = '#ff5252';
+            else if (strength < 75) meter.style.background = '#ffb142';
+            else meter.style.background = '#2ed573';
+        }
+        
+        function validatePassword() {
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirm_password').value;
+            const error = document.getElementById('password-error');
+            
+            if (password !== confirm) {
+                error.textContent = '两次输入的密码不一致';
+                return false;
+            }
+            
+            if (password.length < 6) {
+                error.textContent = '密码长度至少为6位';
+                return false;
+            }
+            
+            error.textContent = '';
+            return true;
+        }
+    </script>
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-box">
+            <div class="logo">🛡️</div>
+            <h1 class="register-title">创建新账户</h1>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <form class="register-form" method="POST" action="{{ url_for('user.register') }}" onsubmit="return validatePassword()">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" name="password" required oninput="checkPasswordStrength()">
+                    <div class="password-strength">
+                        <div class="strength-meter"></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirm_password">确认密码</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required>
+                    <div id="password-error" style="color: #c62828; font-size: 14px; margin-top: 5px;"></div>
+                </div>
+                
+                <button type="submit" class="btn-register">注册</button>
+            </form>
+            
+            <div class="register-links">
+                已有账户? <a href="{{ url_for('user.login') }}">登录</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+</html>

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - Web漏洞扫描系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .user-management {
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .management-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-box input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 250px;
+        }
+
+        .search-box button {
+            padding: 8px 15px;
+            background: #00bcd4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .user-table th, .user-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .user-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .user-table tr:hover {
+            background-color: #f1faff;
+        }
+
+        .role-select {
+            padding: 5px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .btn-action {
+            padding: 5px 10px;
+            margin-right: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn-edit {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-upload {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 5px;
+        }
+
+        .pagination button {
+            padding: 5px 10px;
+            border: 1px solid #dee2e6;
+            background: white;
+            cursor: pointer;
+        }
+
+        .pagination button.active {
+            background: #00bcd4;
+            color: white;
+            border-color: #00bcd4;
+        }
+
+        .pagination button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-admin {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-user {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .avatar-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 10px;
+        }
+
+        .upload-form {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .avatar-container {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+        }
+
+        .upload-overlay {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 3px;
+            border-radius: 50%;
+            cursor: pointer;
+            width: 20px;
+            height: 20px;
+            text-align: center;
+            line-height: 15px;
+            font-size: 14px;
+            display: none; /* 默认隐藏 */
+        }
+
+        .avatar-container:hover .upload-overlay {
+            display: block; /* 悬停时显示 */
+        }
+
+        #avatarFile {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- 顶部横条 -->
+        <header class="topbar">
+            <div class="system-title">Web漏洞扫描系统</div>
+            <div class="user-box">
+                <div class="avatar-container">
+                    <img src="{{ url_for('static', filename='avatars/' + (avatar or 'avatar.png')) }}" alt="头像" class="avatar">
+                    <div class="user-tooltip">
+                        <p>用户名: {{ username }}</p>
+                        <p>登录次数: {{ login_count }}</p>
+                        <p>最近登录: {{ last_login }}</p>
+                        <p>权限等级: {{ '管理员' if role == 'admin' else '普通用户' }}</p>
+                    </div>
+                </div>
+                <span class="username">{{ username }}</span>
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+        </header>
+
+        <div class="body-wrapper">
+            <!-- 左侧功能导航 -->
+            <aside class="sidebar">
+                <nav class="nav-menu">
+
+                    <a href="{{ url_for('index') }}" class="nav-item">  首页</a>
+                    <a href="{{ url_for('asset.asset_page') }}" class="nav-item">💼 资产收集</a>
+                    <a href="#" class="nav-item">🔍 漏洞扫描</a>
+                    <a href="#" class="nav-item">📄 报告生成</a>
+                    <a href="#" class="nav-item">📊 数据分析</a>
+                    <a href="{{ url_for('user.manage_users') }}" class="nav-item active">👥 用户管理</a>
+                </nav>
+            </aside>
+
+            <!-- 内容区域 -->
+            <main class="main-panel">
+                <div class="user-management">
+                    <div class="management-header">
+                        <h2>用户管理</h2>
+                        {% if role == 'admin' %}
+                        <div class="search-box">
+                            <input type="text" id="searchInput" placeholder="搜索用户名..." value="{{ search_term }}">
+                            <button onclick="searchUsers()">搜索</button>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <table class="user-table">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>头像</th>
+                                <th>角色</th>
+                                <th>登录次数</th>
+                                <th>最近登录</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.username }}</td>
+                                <td>
+                                    <div class="avatar-container">
+                                        <img src="{{ url_for('static', filename='avatars/' + (user.avatar or 'avatar.png')) }}"
+                                             alt="头像"
+                                             class="avatar-preview"
+                                             id="avatarPreview_{{ user.id }}">
+                                        <div class="upload-overlay" onclick="document.getElementById('avatarFile_{{ user.id }}').click()">+</div>
+                                        <input type="file" id="avatarFile_{{ user.id }}"
+                                               accept="image/*"
+                                               style="display: none;"
+                                               onchange="uploadAvatar({{ user.id }}, this)">
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="status-badge status-{{ user.role }}">
+                                        {{ '管理员' if user.role == 'admin' else '普通用户' }}
+                                    </span>
+                                </td>
+                                <td>{{ user.login_count }}</td>
+                                <td>{{ user.last_login or '从未登录' }}</td>
+                                <td>
+                                    {% if role == 'admin' or user.id == current_user_id %}
+                                    <select class="role-select" id="role_{{ user.id }}"
+                                            onchange="updateRole({{ user.id }})"
+                                            {% if role != 'admin' %}disabled{% endif %}>
+                                        <option value="admin" {% if user.role =='admin' %}selected{% endif %}>管理员</option>
+                                        <option value="user" {% if user.role =='user' %}selected{% endif %}>普通用户</option>
+                                    </select>
+                                    <!-- 添加条件：管理员且不是当前用户才显示删除按钮 -->
+                                    {% if role == 'admin' and user.id != current_user_id %}
+                                    <button class="btn-action btn-delete"
+                                            onclick="deleteUser({{ user.id }}, '{{ user.username }}')">删除</button>
+                                    {% endif %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" style="text-align: center;">没有找到用户</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <!-- 分页控件 -->
+                    {% if total_pages > 1 and role == 'admin' %}
+                    <div class="pagination">
+                        <button onclick="changePage(1)" {% if current_page == 1 %}disabled{% endif %}>首页</button>
+                        <button onclick="changePage({{ current_page - 1 }})" {% if current_page == 1 %}disabled{% endif %}>上一页</button>
+
+                        {% for page_num in range(1, total_pages + 1) %}
+                            {% if page_num == current_page %}
+                                <button class="active">{{ page_num }}</button>
+                            {% elif page_num >= current_page - 2 and page_num <= current_page + 2 %}
+                                <button onclick="changePage({{ page_num }})">{{ page_num }}</button>
+                            {% elif loop.index == 1 or loop.index == total_pages %}
+                                <button onclick="changePage({{ page_num }})">{{ page_num }}</button>
+                            {% elif page_num == current_page - 3 or page_num == current_page + 3 %}
+                                <button disabled>...</button>
+                            {% endif %}
+                        {% endfor %}
+
+                        <button onclick="changePage({{ current_page + 1 }})" {% if current_page == total_pages %}disabled{% endif %}>下一页</button>
+                        <button onclick="changePage({{ total_pages }})" {% if current_page == total_pages %}disabled{% endif %}>尾页</button>
+                    </div>
+                    {% endif %}
+
+                    {% if role == 'admin' %}
+                    <div class="pagination-info" style="text-align: center; margin-top: 10px; color: #6c757d;">
+                        第 {{ current_page }} 页 / 共 {{ total_pages }} 页 - 总计 {{ total_users }} 个用户
+                    </div>
+                    {% endif %}
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function logout() {
+            if (confirm("确定要退出登录吗？")) {
+                window.location.href = "{{ url_for('user.logout') }}";
+            }
+        }
+
+        function updateRole(userId) {
+            const newRole = document.getElementById(`role_${userId}`).value;
+
+            fetch("{{ url_for('user.update_role', user_id=0) }}".replace('0', userId), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `role=${newRole}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(`用户角色已更新为${newRole === 'admin' ? '管理员' : '普通用户'}`);
+                    location.reload();
+                } else {
+                    alert('更新失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('操作失败，请重试');
+            });
+        }
+
+        function deleteUser(userId, username) {
+            if (!confirm(`确定要删除用户 ${username} 吗？此操作不可恢复！`)) {
+                return;
+            }
+
+            fetch("{{ url_for('user.delete_user', user_id=0) }}".replace('0', userId), {
+                method: 'POST'
+            })
+            .then(response => {
+                alert(`用户 ${username} 已被删除`);
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(`用户 ${username} 已被删除`);
+                location.reload();
+            });
+        }
+
+        // 分页函数
+        function changePage(page) {
+            const searchTerm = document.getElementById('searchInput').value;
+            let url = "{{ url_for('user.manage_users') }}?page=" + page;
+
+            if (searchTerm) {
+                url += "&search=" + encodeURIComponent(searchTerm);
+            }
+
+            window.location.href = url;
+        }
+
+        // 搜索函数
+        function searchUsers() {
+            const searchTerm = document.getElementById('searchInput').value;
+            window.location.href = "{{ url_for('user.manage_users') }}?search=" + encodeURIComponent(searchTerm);
+        }
+
+        // 支持回车键搜索
+        document.getElementById('searchInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                searchUsers();
+            }
+        });
+
+        // 头像上传功能
+        function uploadAvatar(userId, input) {
+            if (!input.files || !input.files[0]) return;
+
+            // 显示加载提示
+            const preview = document.getElementById(`avatarPreview_${userId}`);
+            preview.style.opacity = '0.5';
+
+            const file = input.files[0];
+            const formData = new FormData();
+            formData.append('avatar', file);
+
+            fetch("{{ url_for('user.upload_avatar', user_id=0) }}".replace('0', userId), {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                preview.style.opacity = '1';
+                if (data.status === 'success') {
+                    // 更新预览图片
+                    preview.src = data.avatar_url + '?' + new Date().getTime();
+
+                    // 如果是当前用户，更新顶部头像
+                    if (userId === {{ current_user_id }}) {
+                        document.querySelector('.topbar .avatar').src = data.avatar_url + '?' + new Date().getTime();
+                    }
+                } else {
+                    alert('头像上传失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                preview.style.opacity = '1';
+                console.error('Error:', error);
+                alert('头像上传失败，请重试');
+            });
+        }
+    </script>
+</body>
+</html>

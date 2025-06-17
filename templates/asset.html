@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>资产收集 - Web漏洞扫描系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .asset-panel {
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .asset-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .target-box {
+            display: flex;
+            gap: 10px;
+        }
+
+        .target-box input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 300px;
+        }
+
+        .target-box button {
+            padding: 8px 15px;
+            background: #00bcd4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .result-area {
+            margin-top: 20px;
+            white-space: pre-wrap;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <!-- 顶部横条 -->
+    <header class="topbar">
+        <div class="system-title">Web漏洞扫描系统</div>
+        <div class="user-box">
+            <div class="avatar-container">
+                <img src="{{ url_for('static', filename='avatars/' + (avatar or 'avatar.png')) }}" alt="头像" class="avatar">
+                <div class="user-tooltip">
+                    <p>用户名: {{ username }}</p>
+                    <p>登录次数: {{ login_count }}</p>
+                    <p>最近登录: {{ last_login }}</p>
+                    <p>权限等级: {{ '管理员' if role == 'admin' else '普通用户' }}</p>
+                </div>
+            </div>
+            <span class="username">{{ username }}</span>
+            <button class="logout-btn" onclick="logout()">退出登录</button>
+        </div>
+    </header>
+
+    <div class="body-wrapper">
+        <!-- 左侧导航栏 -->
+        <aside class="sidebar">
+            <nav class="nav-menu">
+                <a href="{{ url_for('index') }}" class="nav-item">  首页</a>
+                <a href="{{ url_for('asset.asset_page') }}" class="nav-item active">💼 资产收集</a>
+                <a href="#" class="nav-item">🔍 漏洞扫描</a>
+                <a href="#" class="nav-item">📄 报告生成</a>
+                <a href="#" class="nav-item">📊 数据分析</a>
+                <a href="{{ url_for('user.manage_users') }}" class="nav-item">👥 用户管理</a>
+            </nav>
+        </aside>
+
+        <!-- 内容区域 -->
+        <main class="main-panel">
+            <div class="asset-panel">
+                <div class="asset-header">
+                    <h2>资产收集</h2>
+                    <div class="target-box">
+                        <input type="text" id="targetInput" placeholder="请输入 IP 或域名">
+                        <button onclick="collectAsset()">开始收集</button>
+                    </div>
+                </div>
+
+                <div id="resultBox" class="result-area">等待输入目标后点击收集按钮...</div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    function logout() {
+        if (confirm("确定要退出登录吗？")) {
+            window.location.href = "{{ url_for('user.logout') }}";
+        }
+    }
+
+    function collectAsset() {
+        const target = document.getElementById('targetInput').value.trim();
+        const resultBox = document.getElementById('resultBox');
+
+        if (!target) {
+            alert("请输入有效的目标");
+            return;
+        }
+
+        resultBox.textContent = "正在收集资产，请稍候...";
+
+        fetch("{{ url_for('asset.collect') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ target: target })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                let output = `✅ 收集成功：目标 ${data.target}\n\n`;
+                for (const asset of data.assets) {
+                    output += `【${asset.type}】${asset.value}\n`;
+                    if (asset.ip) output += `IP: ${asset.ip}\n`;
+                    output += `摘要: ${asset.scan.split('\\n')[0]}\n\n`;
+                }
+                resultBox.textContent = output;
+            } else {
+                resultBox.textContent = "❌ 发生错误：" + data.message;
+            }
+        })
+        .catch(err => {
+            resultBox.textContent = "请求失败：" + err.message;
+        });
+    }
+</script>
+</body>
+</html>

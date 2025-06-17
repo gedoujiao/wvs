@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Web漏洞扫描系统</title>
-    <link rel="stylesheet" href="../static/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script>
-        function logout() { 
-            alert("您已退出登录！");
+        function logout() {
+            if (confirm("确定要退出登录吗？")) {
+                window.location.href = "{{ url_for('user.logout') }}";
+            }
         }
     </script>
 </head>
@@ -18,15 +20,15 @@
         <div class="system-title">Web漏洞扫描系统</div>
         <div class="user-box">
             <div class="avatar-container">
-                <img src="../static/avatar.png" alt="头像" class="avatar">
+                <img src="{{ url_for('static', filename='avatars/' + (session.avatar or 'avatar.png')) }}" alt="头像" class="avatar">
                 <div class="user-tooltip">
-                    <p>用户名: 用户张三</p>
-                    <p>登录次数: 42</p>
-                    <p>最近登录: 2025-06-16 10:12</p>
-                    <p>权限等级: 系统管理员</p>
+                    <p>用户名: {{ session.username }}</p>
+                    <p>登录次数: {{ login_count }}</p>
+                    <p>最近登录: {{ last_login }}</p>
+                    <p>权限等级: {{ '系统管理员' if session.role == 'admin' else '普通用户' }}</p>
                 </div>
             </div>
-            <span class="username">用户张三</span>
+            <span class="username">{{ session.username }}</span>
             <button class="logout-btn" onclick="logout()">退出登录</button>
         </div>
     </header>
@@ -35,10 +37,12 @@
         <!-- 左侧功能导航 -->
         <aside class="sidebar">
             <nav class="nav-menu">
-                <a href="#" class="nav-item active">💼 资产收集</a>
+                <a href="#" class="nav-item active">  首页</a>
+                <a href="{{ url_for('asset.asset_page') }}" class="nav-item">💼 资产收集</a>
                 <a href="#" class="nav-item">🔍 漏洞扫描</a>
                 <a href="#" class="nav-item">📄 报告生成</a>
                 <a href="#" class="nav-item">📊 数据分析</a>
+                <a href="{{ url_for('user.manage_users') }}" class="nav-item">👥 用户管理</a>
             </nav>
         </aside>
 
