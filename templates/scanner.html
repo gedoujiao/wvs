@@ -1,138 +1,208 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <title>漏洞扫描 - Web漏洞扫描系统</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        .scanner-panel {
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .upload-form {
-            margin-bottom: 20px;
-        }
-
-        .upload-form input[type="file"] {
-            padding: 5px;
-        }
-
-        .upload-form button {
-            padding: 8px 15px;
-            background-color: #00bcd4;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-left: 10px;
-        }
-
-        .scan-results {
-            margin-top: 20px;
-        }
-
-        .scan-results table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .scan-results th, .scan-results td {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            text-align: left;
-        }
-
-        .scan-results th {
-            background-color: #f8f9fa;
-        }
-
-        .status-ok {
-            color: green;
-        }
-
-        .status-alert {
-            color: red;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>漏洞扫描 - Web漏洞扫描系统</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <style>
+    body {
+      background-color: #f4f6f8;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    .scanner-panel {
+      padding: 30px;
+      margin: 30px;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    .scanner-panel h2 {
+      font-size: 22px;
+      margin-bottom: 20px;
+      border-left: 5px solid #00bcd4;
+      padding-left: 10px;
+    }
+    .form-section {
+      margin-bottom: 20px;
+    }
+    input[type="file"],
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-size: 14px;
+      transition: border 0.3s ease;
+    }
+    textarea {
+      height: 150px;
+      resize: vertical;
+    }
+    button {
+      background-color: #00bcd4;
+      color: white;
+      padding: 10px 20px;
+      font-size: 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .scan-results {
+      margin-top: 30px;
+    }
+    .scan-results table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    .scan-results th, .scan-results td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    .scan-results th {
+      background-color: #f7f7f7;
+    }
+    .status-ok {
+      color: green;
+    }
+    .status-alert {
+      color: red;
+    }
+  </style>
 </head>
 <body>
 <div class="dashboard-container">
-    <!-- 顶部 -->
-    <header class="topbar">
-        <div class="system-title">Web漏洞扫描系统</div>
-        <div class="user-box">
-            <div class="avatar-container">
-                <img src="{{ url_for('static', filename='avatars/' + (avatar or 'avatar.png')) }}" alt="头像" class="avatar">
-                <div class="user-tooltip">
-                    <p>用户名: {{ username }}</p>
-                    <p>登录次数: {{ login_count }}</p>
-                    <p>最近登录: {{ last_login }}</p>
-                    <p>权限等级: {{ '管理员' if role == 'admin' else '普通用户' }}</p>
-                </div>
-            </div>
-            <span class="username">{{ username }}</span>
-            <button class="logout-btn" onclick="logout()">退出登录</button>
+  <header class="topbar">
+    <div class="system-title">Web漏洞扫描系统</div>
+    <div class="user-box">
+      <div class="avatar-container">
+        <img src="{{ url_for('static', filename='avatars/' + (avatar or 'avatar.png')) }}" alt="头像" class="avatar">
+        <div class="user-tooltip">
+          <p>用户名: {{ username }}</p>
+          <p>登录次数: {{ login_count }}</p>
+          <p>最近登录: {{ last_login }}</p>
+          <p>权限等级: {{ '管理员' if role == 'admin' else '普通用户' }}</p>
         </div>
-    </header>
-
-    <!-- 主体 -->
-    <div class="body-wrapper">
-        <!-- 左侧导航栏 -->
-        <aside class="sidebar">
-            <nav class="nav-menu">
-                <a href="{{ url_for('index') }}" class="nav-item">  首页</a>
-                <a href="{{ url_for('asset.asset_page') }}" class="nav-item">💼 资产收集</a>
-                <a href="{{ url_for('scanner.scanner_home') }}" class="nav-item active">🔍 漏洞扫描</a>
-                <a href="#" class="nav-item">📄 报告生成</a>
-                <a href="#" class="nav-item">📊 数据分析</a>
-                <a href="{{ url_for('user.manage_users') }}" class="nav-item">👥 用户管理</a>
-            </nav>
-        </aside>
-
-        <!-- 内容 -->
-        <main class="main-panel">
-            <div class="scanner-panel">
-                <h2>上传域名列表（CSV 或 TXT）进行漏洞扫描</h2>
-                <form class="upload-form" method="POST" enctype="multipart/form-data">
-                    <input type="file" name="target_file" accept=".csv,.txt" required>
-                    <button type="submit">开始扫描</button>
-                </form>
-
-                {% if results %}
-                <div class="scan-results">
-                    <h3>扫描结果：</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>目标</th>
-                                <th>漏洞检测状态</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in results %}
-                            <tr>
-                                <td>{{ item.target }}</td>
-                                <td class="{{ 'status-alert' if '发现' in item.status else 'status-ok' }}">{{ item.status }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% endif %}
-            </div>
-        </main>
+      </div>
+      <span class="username">{{ username }}</span>
+      <button class="logout-btn" onclick="logout()">退出登录</button>
     </div>
+  </header>
+
+  <div class="body-wrapper">
+    <aside class="sidebar">
+      <nav class="nav-menu">
+        <a href="{{ url_for('index') }}" class="nav-item">🏠 首页</a>
+        <a href="{{ url_for('asset.asset_page') }}" class="nav-item">💼 资产收集</a>
+        <a href="{{ url_for('scanner.scanner_home') }}" class="nav-item active">🔍 漏洞扫描</a>
+        <a href="#" class="nav-item">📄 报告生成</a>
+        <a href="#" class="nav-item">📊 数据分析</a>
+        <a href="{{ url_for('user.manage_users') }}" class="nav-item">👥 用户管理</a>
+      </nav>
+    </aside>
+
+    <main class="main-panel">
+      <div class="scanner-panel">
+        <h2>🔍 漏洞扫描</h2>
+
+        <form id="scanForm" method="POST" enctype="multipart/form-data" action="{{ url_for('scanner.scanner_home') }}">
+
+          <div class="form-section">
+            <label>上传 TXT / CSV 文件</label>
+            <input type="file" name="target_file" accept=".txt,.csv" id="fileInput" />
+          </div>
+
+          <div class="form-section">
+            <label>输入目标（支持域名或 IP:端口，换行分隔）</label>
+            <textarea name="manual_targets" placeholder="如：example.com:8080/example.com" id="manualTargets"></textarea>
+          </div>
+
+          <div class="form-section">
+            <button type="submit">开始扫描</button>
+            <p id="scanStatusText" style="color: #666; margin-top: 10px;"></p> <!-- 提示正在扫描 -->
+          </div>
+        </form>
+
+        {% if results %}
+        <div class="scan-results">
+          <h3>扫描结果：</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>目标</th>
+                <th>漏洞总数</th>
+                <th>低危</th>
+                <th>中危</th>
+                <th>高危</th>
+                <th>严重</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in results %}
+              <tr>
+                <td>{{ r.target }}</td>
+                <td class="{{ 'status-alert' if r.vuln_count > 0 else 'status-ok' }}">{{ r.vuln_count }}</td>
+                <td>{{ r.severities.low }}</td>
+                <td>{{ r.severities.medium }}</td>
+                <td>{{ r.severities.high }}</td>
+                <td>{{ r.severities.critical }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endif %}
+      </div>
+    </main>
+  </div>
 </div>
 
 <script>
-    function logout() {
-        if (confirm("确定要退出登录吗？")) {
-            window.location.href = "{{ url_for('user.logout') }}";
-        }
-    }
+function logout() {
+  if (confirm("确认退出登录？")) {
+    window.location.href = "{{ url_for('user.logout') }}";
+  }
+}
+
+// 自动填充文件内容到文本框
+document.getElementById('fileInput').addEventListener('change', function () {
+  const file = this.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    document.getElementById('manualTargets').value = e.target.result.trim();
+  };
+  reader.readAsText(file);
+});
+
+// 控制扫描提示 + 提交表单
+document.getElementById('scanForm').addEventListener('submit', function (e) {
+  e.preventDefault(); // 阻止默认提交，改为 JS 控制
+
+  // 显示提示文字
+  document.getElementById('scanStatusText').textContent = '🔍 正在扫描，请稍候...';
+
+  // 使用 FormData 提交
+  const formData = new FormData(this);
+  fetch(this.action, {
+    method: 'POST',
+    body: formData
+  })
+    .then(res => res.text())
+    .then(html => {
+      document.open();
+      document.write(html);
+      document.close();
+    })
+    .catch(err => {
+      alert('提交失败：' + err.message);
+    });
+});
 </script>
+
 </body>
 </html>
