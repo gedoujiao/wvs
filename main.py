@@ -1,4 +1,3 @@
-# main.py
 from flask import Flask, render_template, session, redirect, url_for
 from backend import blueprints
 import os

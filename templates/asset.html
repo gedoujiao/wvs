@@ -124,12 +124,8 @@
         <a href="{{ url_for('index') }}" class="nav-item">🏠 首页</a>
         <a href="{{ url_for('asset.asset_page') }}" class="nav-item active">💼 资产收集</a>
         <a href="{{ url_for('scanner.scanner_home') }}" class="nav-item">🔍 漏洞扫描</a>
-<<<<<<< HEAD
-=======
         <a href="{{ url_for('visualization.index') }}" class="nav-item">🌍 全球热力图</a>
-        <a href="#" class="nav-item">📄 报告生成</a>
->>>>>>> ed0a693eb483cf05cc5228b6872ed284e5501dd7
-        <a href="#" class="nav-item">📊 数据分析</a>
+        <a href="{{ url_for('analysis.analyze') }}" class="nav-item">📊 数据分析</a>
         <a href="{{ url_for('user.manage_users') }}" class="nav-item">👥 用户管理</a>
       </nav>
     </aside>

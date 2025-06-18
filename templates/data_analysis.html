@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>数据分析</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background-color: #f4f6f8; font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .analysis-panel {
+      padding: 30px;
+      margin: 30px;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    .analysis-panel h2 {
+      font-size: 22px;
+      margin-bottom: 20px;
+      border-left: 5px solid #00bcd4;
+      padding-left: 10px;
+    }
+    canvas {
+      max-width: 400px;
+      margin: 30px auto;
+      display: block;
+    }
+    .upload-form {
+      margin-bottom: 20px;
+    }
+    input[type="file"] {
+      padding: 10px;
+      margin-right: 10px;
+    }
+    button {
+      background-color: #00bcd4;
+      color: white;
+      padding: 10px 20px;
+      font-size: 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+  <script>
+    function logout() {
+      if (confirm("确定要退出登录吗？")) {
+        window.location.href = "{{ url_for('user.logout') }}";
+      }
+    }
+  </script>
+</head>
+<body>
+<div class="dashboard-container">
+  <!-- 顶部横条 -->
+  <header class="topbar">
+    <div class="system-title">Web漏洞扫描系统</div>
+    <div class="user-box">
+      <div class="avatar-container">
+        <img src="{{ url_for('static', filename='avatars/' + (session.avatar or 'avatar.png')) }}" alt="头像" class="avatar">
+        <div class="user-tooltip">
+          <p>用户名: {{ session.username }}</p>
+          <p>登录次数: {{ login_count }}</p>
+          <p>最近登录: {{ last_login }}</p>
+          <p>权限等级: {{ '系统管理员' if session.role == 'admin' else '普通用户' }}</p>
+        </div>
+      </div>
+      <span class="username">{{ session.username }}</span>
+      <button class="logout-btn" onclick="logout()">退出登录</button>
+    </div>
+  </header>
+
+  <div class="body-wrapper">
+    <!-- 左侧导航栏 -->
+    <aside class="sidebar">
+      <nav class="nav-menu">
+        <a href="{{ url_for('index') }}" class="nav-item">🏠 首页</a>
+        <a href="{{ url_for('asset.asset_page') }}" class="nav-item">💼 资产收集</a>
+        <a href="{{ url_for('scanner.scanner_home') }}" class="nav-item">🔍 漏洞扫描</a>
+        <a href="{{ url_for('visualization.index') }}" class="nav-item">🌍 全球热力图</a>
+        <a href="{{ url_for('analysis.analyze') }}" class="nav-item active">📊 数据分析</a>
+        <a href="{{ url_for('user.manage_users') }}" class="nav-item">👥 用户管理</a>
+      </nav>
+    </aside>
+
+    <!-- 主体区域 -->
+    <main class="main-panel">
+      <div class="analysis-panel">
+        <h2>📊 上传扫描结果进行分析</h2>
+        <form method="POST" enctype="multipart/form-data" class="upload-form">
+          <input type="file" name="data_file" accept=".csv" required>
+          <button type="submit">分析</button>
+        </form>
+
+        {% if stats %}
+        <hr>
+        <h3>分析结果：</h3>
+        {% for ip, data in stats.items() %}
+          <h4>{{ ip }} - {{ data.province }}</h4>
+          <canvas id="chart_{{ loop.index }}"></canvas>
+          <script>
+            const ctx{{ loop.index }} = document.getElementById('chart_{{ loop.index }}').getContext('2d');
+            new Chart(ctx{{ loop.index }}, {
+              type: 'doughnut',
+              data: {
+                labels: ['高危', '中危', '低危'],
+                datasets: [{
+                  data: [{{ data.high }}, {{ data.medium }}, {{ data.low }}],
+                  backgroundColor: ['#e53935', '#ffb300', '#43a047']
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  legend: { position: 'bottom' },
+                  title: { display: true, text: '漏洞分布图' }
+                }
+              }
+            });
+          </script>
+        {% endfor %}
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

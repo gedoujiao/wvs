@@ -64,7 +64,7 @@ def get_results_by_task(task_id):
 
 from io import BytesIO, TextIOWrapper
 
-from io import BytesIO
+
 
 @scanner_bp.route('/results/export/<task_id>', methods=['GET'])
 def export_csv(task_id):
@@ -72,12 +72,14 @@ def export_csv(task_id):
     if not task:
         return "任务不存在", 404
 
-    # 使用字符串缓冲区写入数据，避免 TextIOWrapper 关闭底层 BytesIO
-    output_str = "目标,省份,漏洞名称,严重等级,位置/描述\n"
+    # CSV 表头
+    output_str = "IP地址,地理位置,漏洞总数,高危漏洞数量,中危漏洞数量,低危漏洞数量\n"
     for item in task['results']:
-        for vuln in item.get('details', []):
-            row = f"{item['target']},{item['province']},{vuln['name']},{vuln['severity']},{vuln['location']}\n"
-            output_str += row
+        row = f"{item['target']},{item['province']},{item['vuln_count']}," \
+              f"{item['severities'].get('high', 0)}," \
+              f"{item['severities'].get('medium', 0)}," \
+              f"{item['severities'].get('low', 0)}\n"
+        output_str += row
 
     output_bytes = BytesIO()
     output_bytes.write(output_str.encode('utf-8-sig'))
