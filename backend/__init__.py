@@ -2,11 +2,12 @@
 from .asset import asset_bp
 from .scanner import scanner_bp
 from .user import user_bp
-
+from .visualization import visualization_bp
 
 # 集中暴露所有蓝图列表，用于 main.py 自动注册
 blueprints = [
     asset_bp,
     scanner_bp,
-    user_bp
+    user_bp,
+    visualization_bp
 ]

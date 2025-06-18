@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>全球热力图 - Web漏洞扫描系统</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <style>
+    body {
+      background-color: #f4f6f8;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    .scanner-panel {
+      padding: 30px;
+      margin: 30px;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    .scanner-panel h2 {
+      font-size: 22px;
+      margin-bottom: 20px;
+      border-left: 5px solid #00bcd4;
+      padding-left: 10px;
+    }
+    .form-section {
+      margin-bottom: 20px;
+    }
+    .form-section label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #333;
+    }
+    .data-source-info {
+      background-color: #f8f9fa;
+      border: 1px solid #e9ecef;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .data-source-info h3 {
+      margin: 0 0 8px 0;
+      color: #00bcd4;
+      font-size: 16px;
+    }
+    .data-source-info p {
+      margin: 0;
+      color: #666;
+      font-size: 14px;
+    }
+    button {
+      background-color: #00bcd4;
+      color: white;
+      padding: 10px 20px;
+      font-size: 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-right: 10px;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #00acc1;
+    }
+    .map-container {
+      background-color: #fff;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      height: 600px;
+      margin-top: 20px;
+    }
+    .loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #fafafa;
+      z-index: 1000;
+    }
+    .loading-content {
+      text-align: center;
+      color: #666;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #00bcd4;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .map-content {
+      width: 100%;
+      height: 100%;
+    }
+    .alert {
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    .alert-success {
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+    }
+    .alert-error {
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+    .alert-warning {
+      background-color: #fff3cd;
+      border: 1px solid #ffeaa7;
+      color: #856404;
+    }
+    .alert-info {
+      background-color: #d1ecf1;
+      border: 1px solid #bee5eb;
+      color: #0c5460;
+    }
+    .hidden {
+      display: none !important;
+    }
+    .controls-section {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .file-upload-hint {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .result-box {
+      background-color: #fafafa;
+      border: 1px solid #eee;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+<div class="dashboard-container">
+  <header class="topbar">
+    <div class="system-title">Web漏洞扫描系统</div>
+    <div class="user-box">
+      <div class="avatar-container">
+        <img src="{{ url_for('static', filename='avatars/' + (avatar or 'avatar.png')) }}" alt="头像" class="avatar">
+        <div class="user-tooltip">
+          <p>用户名: {{ username }}</p>
+          <p>登录次数: {{ login_count }}</p>
+          <p>最近登录: {{ last_login }}</p>
+          <p>权限等级: {{ '管理员' if role == 'admin' else '普通用户' }}</p>
+        </div>
+      </div>
+      <span class="username">{{ username }}</span>
+      <button class="logout-btn" onclick="logout()">退出登录</button>
+    </div>
+  </header>
+
+  <div class="body-wrapper">
+    <aside class="sidebar">
+      <nav class="nav-menu">
+        <a href="{{ url_for('index') }}" class="nav-item">🏠 首页</a>
+        <a href="{{ url_for('asset.asset_page') }}" class="nav-item">💼 资产收集</a>
+        <a href="{{ url_for('scanner.scanner_home') }}" class="nav-item">🔍 漏洞扫描</a>
+        <a href="{{ url_for('visualization.index') }}" class="nav-item active">🌍 全球热力图</a>
+        <a href="#" class="nav-item">📄 报告生成</a>
+        <a href="#" class="nav-item">📊 数据分析</a>
+        <a href="{{ url_for('user.manage_users') }}" class="nav-item">👥 用户管理</a>
+      </nav>
+    </aside>
+
+    <main class="main-panel">
+      <div class="scanner-panel">
+        <h2>🌍 全球漏洞热力图</h2>
+
+        <!-- 数据源信息 -->
+        <div class="data-source-info" id="dataSourceInfo">
+          <h3 id="dataSourceTitle">📊 当前数据源</h3>
+          <p id="dataSourceDesc">正在检测数据源...</p>
+        </div>
+
+        <!-- 控制区域 -->
+        <div class="form-section">
+          <label>数据管理</label>
+          <div class="controls-section">
+            <button onclick="window.location.href='{{ url_for('visualization.upload_csv') }}'">📤 上传CSV文件</button>
+            <button onclick="refreshMap()">🔄 刷新地图</button>
+            <button onclick="showMapInfo()">📊 地图信息</button>
+          </div>
+          <div class="file-upload-hint">
+            支持格式：ip,省份,漏洞个数,高危个数,中危个数,低危个数
+          </div>
+        </div>
+
+        <!-- 状态提示区域 -->
+        <div id="alertContainer"></div>
+
+        <!-- 地图容器 -->
+        <div class="map-container">
+          <div class="loading" id="loading">
+            <div class="loading-content">
+              <div class="spinner"></div>
+              <div>🗺️ 正在加载热力图数据...</div>
+            </div>
+          </div>
+          <div class="map-content" id="mapContent"></div>
+        </div>
+
+        <!-- 地图统计信息 -->
+        <div id="mapStats" class="result-box" style="display: none;">
+          <strong>📈 数据统计</strong>
+          <div id="statsContent">点击"地图信息"按钮查看详细统计</div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+// 全局变量
+let currentFile = null;
+
+function logout() {
+  if (confirm("确认退出登录？")) {
+    window.location.href = "{{ url_for('user.logout') }}";
+  }
+}
+
+// 获取URL参数
+function getUrlParameter(name) {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get(name);
+}
+
+// 显示提示消息
+function showAlert(message, type = 'info') {
+  const alertContainer = document.getElementById('alertContainer');
+  const alertDiv = document.createElement('div');
+
+  let icon = '📄';
+  let className = 'alert-info';
+
+  switch(type) {
+    case 'success':
+      icon = '✅';
+      className = 'alert-success';
+      break;
+    case 'error':
+      icon = '❌';
+      className = 'alert-error';
+      break;
+    case 'warning':
+      icon = '⚠️';
+      className = 'alert-warning';
+      break;
+  }
+
+  alertDiv.className = `alert ${className}`;
+  alertDiv.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+
+  // 清除之前的提示
+  alertContainer.innerHTML = '';
+  alertContainer.appendChild(alertDiv);
+
+  // 成功和警告消息3秒后自动消失
+  if (type === 'success' || type === 'warning') {
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        alertDiv.parentNode.removeChild(alertDiv);
+      }
+    }, 3000);
+  }
+}
+
+// 显示/隐藏加载状态
+function showLoading(show = true) {
+  const loading = document.getElementById('loading');
+  loading.classList.toggle('hidden', !show);
+}
+
+// 更新数据源信息
+function updateDataSourceInfo() {
+  const titleElement = document.getElementById('dataSourceTitle');
+  const descElement = document.getElementById('dataSourceDesc');
+
+  if (currentFile) {
+    titleElement.textContent = '📂 上传文件数据';
+    descElement.innerHTML = `
+      <strong>文件名：</strong>${currentFile}<br>
+      <strong>状态：</strong>已加载自定义漏洞数据<br>
+      <strong>说明：</strong>当前热力图显示您上传的CSV文件中的漏洞分布数据
+    `;
+    showAlert(`正在使用上传文件: ${currentFile}`, 'success');
+  } else {
+    titleElement.textContent = '📝 演示数据';
+    descElement.innerHTML = `
+      <strong>数据来源：</strong>系统内置演示数据<br>
+      <strong>覆盖范围：</strong>全球主要城市和地区<br>
+      <strong>说明：</strong>包含模拟的漏洞分布数据，用于功能演示
+    `;
+  }
+}
+
+// 加载热力图
+async function loadHeatmap() {
+  showLoading(true);
+
+  try {
+    // 构建API URL
+    let apiUrl = '/visualization/api/heatmap';
+    if (currentFile) {
+      apiUrl += `?file=${encodeURIComponent(currentFile)}`;
+    }
+
+    console.log('🗺️ 加载热力图 API:', apiUrl);
+
+    const response = await fetch(apiUrl);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const htmlContent = await response.text();
+
+    // 显示地图内容
+    const mapContent = document.getElementById('mapContent');
+    mapContent.innerHTML = htmlContent;
+
+    showLoading(false);
+
+    if (currentFile) {
+      showAlert('🎯 热力图加载成功！显示上传文件数据', 'success');
+    } else {
+      showAlert('🎯 热力图加载成功！显示演示数据', 'success');
+    }
+
+    // 隐藏统计信息面板
+    document.getElementById('mapStats').style.display = 'none';
+
+  } catch (error) {
+    console.error('❌ 热力图加载失败:', error);
+    showLoading(false);
+
+    const mapContent = document.getElementById('mapContent');
+    mapContent.innerHTML = `
+      <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; padding: 40px; text-align: center; color: #666;">
+        <div style="font-size: 4em; margin-bottom: 20px;">🗺️</div>
+        <h3 style="margin-bottom: 15px; color: #f44336;">地图加载失败</h3>
+        <p style="margin-bottom: 20px; color: #666;">错误信息: ${error.message}</p>
+        <button onclick="loadHeatmap()" style="background-color: #00bcd4; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">🔄 重新加载</button>
+      </div>
+    `;
+
+    showAlert(`地图加载失败: ${error.message}`, 'error');
+  }
+}
+
+// 刷新地图
+function refreshMap() {
+  console.log('🔄 手动刷新地图');
+  showAlert('正在刷新地图数据...', 'info');
+  loadHeatmap();
+}
+
+// 显示地图信息
+async function showMapInfo() {
+  const statsDiv = document.getElementById('mapStats');
+  const statsContent = document.getElementById('statsContent');
+
+  try {
+    showAlert('正在获取地图统计信息...', 'info');
+
+    // 构建统计API URL
+    let apiUrl = '/visualization/api/stats';
+    if (currentFile) {
+      apiUrl += `?file=${encodeURIComponent(currentFile)}`;
+    }
+
+    const response = await fetch(apiUrl);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // 格式化统计信息
+    const statsHtml = `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 10px;">
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 24px; font-weight: bold; color: #00bcd4;">${data.total_locations}</div>
+          <div style="color: #666; font-size: 14px;">监控地区</div>
+        </div>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 24px; font-weight: bold; color: #007acc;">${data.total_vulns}</div>
+          <div style="color: #666; font-size: 14px;">漏洞总数</div>
+        </div>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 24px; font-weight: bold; color: #ff5722;">${data.total_high}</div>
+          <div style="color: #666; font-size: 14px;">高危漏洞</div>
+        </div>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 24px; font-weight: bold; color: #ff9800;">${data.total_medium}</div>
+          <div style="color: #666; font-size: 14px;">中危漏洞</div>
+        </div>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 24px; font-weight: bold; color: #4caf50;">${data.total_low}</div>
+          <div style="color: #666; font-size: 14px;">低危漏洞</div>
+        </div>
+      </div>
+
+      ${data.top_locations && data.top_locations.length > 0 ? `
+      <div style="margin-top: 20px;">
+        <h4 style="margin-bottom: 10px; color: #00bcd4;">🏆 漏洞数量前5地区</h4>
+        <div style="display: grid; gap: 8px;">
+          ${data.top_locations.slice(0, 5).map((loc, index) => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8f9fa; border-radius: 6px;">
+              <span style="font-weight: 500;">${index + 1}. ${loc['省份/州名']}</span>
+              <span style="color: #666;">总计: <strong>${loc['漏洞个数']}</strong> | 高危: <strong style="color: #ff5722;">${loc['高危个数']}</strong></span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      ` : ''}
+    `;
+
+    statsContent.innerHTML = statsHtml;
+    statsDiv.style.display = 'block';
+
+    showAlert('📊 统计信息加载完成', 'success');
+
+  } catch (error) {
+    console.error('❌ 获取统计信息失败:', error);
+    statsContent.innerHTML = `<p style="color: #f44336;">获取统计信息失败: ${error.message}</p>`;
+    statsDiv.style.display = 'block';
+    showAlert(`获取统计信息失败: ${error.message}`, 'error');
+  }
+}
+
+// 页面初始化
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('📄 页面加载完成，开始初始化...');
+
+  // 检查URL参数中的文件名
+  currentFile = getUrlParameter('file');
+  console.log('🔍 检测到文件参数:', currentFile);
+
+  // 更新数据源信息
+  updateDataSourceInfo();
+
+  // 加载热力图
+  loadHeatmap();
+});
+</script>
+</body>
+</html>
