@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>上传CSV文件 - Web漏洞扫描系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .upload-content {
+            padding: 30px;
+            background-color: #fff;
+            margin: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            line-height: 1.8;
+        }
+        .upload-content h1 {
+            color: #00bcd4;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        .form-group input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px dashed #007ACC;
+            border-radius: 8px;
+            background: rgba(0,122,204,0.1);
+        }
+        .btn {
+            background: #007ACC;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-bottom: 15px;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        .btn:hover {
+            background: #005A9F;
+            color: white;
+            text-decoration: none;
+        }
+        .btn-secondary {
+            background: #6C757D;
+        }
+        .btn-secondary:hover {
+            background: #545B62;
+        }
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .alert-success {
+            background: #D4EDDA;
+            color: #155724;
+            border: 1px solid #C3E6CB;
+        }
+        .alert-error {
+            background: #F8D7DA;
+            color: #721C24;
+            border: 1px solid #F5C6CB;
+        }
+        .format-info {
+            background: rgba(0,122,204,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .format-info h3 {
+            color: #007ACC;
+            margin-bottom: 10px;
+        }
+        .format-info code {
+            background: #F8F9FA;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+    <script>
+        function logout() {
+            if (confirm("确定要退出登录吗？")) {
+                window.location.href = "{{ url_for('user.logout') }}";
+            }
+        }
+    </script>
+</head>
+<body>
+<div class="dashboard-container">
+     <!-- 顶部横条 -->
+    <header class="topbar">
+        <div class="system-title">Web漏洞扫描系统</div>
+        <div class="user-box">
+            <div class="avatar-container">
+                <img src="{{ url_for('static', filename='avatars/' + (session.avatar or 'avatar.png')) }}" alt="头像" class="avatar">
+                <div class="user-tooltip">
+                    <p>用户名: {{ session.username }}</p>
+                    <p>登录次数: {{ login_count }}</p>
+                    <p>最近登录: {{ last_login }}</p>
+                    <p>权限等级: {{ '系统管理员' if session.role == 'admin' else '普通用户' }}</p>
+                </div>
+            </div>
+            <span class="username">{{ session.username }}</span>
+            <button class="logout-btn" onclick="logout()">退出登录</button>
+        </div>
+    </header>
+
+    <div class="body-wrapper">
+        <!-- 左侧功能导航 -->
+        <aside class="sidebar">
+            <nav class="nav-menu">
+                <a href="{{ url_for('index') }}" class="nav-item">🏠 首页</a>
+                <a href="{{ url_for('asset.asset_page') }}" class="nav-item">💼 资产收集</a>
+                <a href="{{ url_for('scanner.scanner_home') }}" class="nav-item">🔍 漏洞扫描</a>
+                <a href="{{ url_for('visualization.index') }}" class="nav-item">🌍 全球热力图</a>
+                <a href="#" class="nav-item">📄 报告生成</a>
+                <a href="#" class="nav-item">📊 数据分析</a>
+                <a href="{{ url_for('user.manage_users') }}" class="nav-item">👥 用户管理</a>
+            </nav>
+        </aside>
+
+        <!-- 内容区域 -->
+        <main class="main-panel">
+            <div class="upload-content">
+                <h1>📊 上传CSV文件</h1>
+
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-success">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <div class="format-info">
+                    <h3>📋 CSV文件格式要求</h3>
+                    <p>请确保您的CSV文件包含以下列（按顺序）：</p>
+                    <ul>
+                        <li><code>ip</code> - IP地址</li>
+                        <li><code>省份</code> - 地理位置</li>
+                        <li><code>漏洞个数</code> - 漏洞总数</li>
+                        <li><code>高危个数</code> - 高危漏洞数量</li>
+                        <li><code>中危个数</code> - 中危漏洞数量</li>
+                        <li><code>低危个数</code> - 低危漏洞数量</li>
+                    </ul>
+                    <p><strong>示例格式：</strong></p>
+                    <div style="background: #f5f5f5; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px;">
+                        ip,省份,漏洞个数,高危个数,中危个数,低危个数<br>
+                        192.168.1.1,北京,15,3,7,5<br>
+                        10.0.0.1,上海,12,2,5,5
+                    </div>
+                </div>
+
+                <form method="post" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="file">选择CSV文件:</label>
+                        <input type="file" id="file" name="file" accept=".csv" required>
+                    </div>
+
+                    <button type="submit" class="btn">
+                        📤 上传文件
+                    </button>
+                </form>
+
+                <a href="/visualization" class="btn btn-secondary">
+                    ← 返回热力图
+                </a>
+
+                <a href="/" class="btn btn-secondary">
+                    🏠 返回主页
+                </a>
+            </div>
+        </main>
+    </div>
+
+</div>
+</body>
+</html>
