@@ -132,34 +132,50 @@
 
     <main class="main-panel">
       <div class="scanner-panel">
-        <h2>🧭 资产收集</h2>
+      <h2>🧭 资产收集</h2>
 
-        <div class="form-section">
-          <label>上传 TXT / CSV 文件</label>
-          <input type="file" id="fileInput" accept=".txt,.csv" />
-          <small style="color: #666;">上传后将自动填充到下方文本框</small>
-        </div>
-
-        <div class="form-section">
-          <label>输入目标（可手动编辑）</label>
-          <textarea id="targetInput" placeholder="example.com, 8.8.8.8 或每行一个目标"></textarea>
-        </div>
-
-        <div class="form-section">
-          <button onclick="startCollection()">开始资产收集</button>
-        </div>
-
-        <div class="progress-bar">
-          <div class="progress-bar-inner" id="progressInner"></div>
-        </div>
-
-        <div id="result" class="result-section"></div>
-        <div id="csvTableContainer" class="result-section"></div>
-        <div style="margin-top: 10px;">
-          <button onclick="downloadCSV(false)">下载完整 CSV</button>
-          <button onclick="downloadCSV(true)">仅下载 IP 列</button>
-        </div>
+      <div class="form-section">
+        <label>上传目标文件 (TXT / CSV)</label>
+        <input type="file" id="targetFileInput" accept=".txt,.csv" />
+        <small style="color: #666;">上传后将自动填充下方</small>
       </div>
+
+      <div class="form-section">
+        <label>上传子域名字典（可选，自定义覆盖默认字典）</label>
+        <input type="file" id="dictFileInput" accept=".txt" />
+        <small style="color: #666;">默认将使用系统内置的 100/500/1000 字典</small>
+      </div>
+
+      <div class="form-section">
+        <label>子域名字典级别（仅在未上传字典时生效）</label>
+        <select id="subdomainLevel">
+          <option value="100">默认 100 个</option>
+          <option value="500">增强 500 个</option>
+          <option value="1000">深度 1000 个</option>
+        </select>
+      </div>
+
+      <div class="form-section">
+        <label>输入目标（每行一个）</label>
+        <textarea id="targetInput" placeholder="example.com, 8.8.8.8 或每行一个目标"></textarea>
+      </div>
+
+      <div class="form-section">
+        <button onclick="startCollection()">开始资产收集</button>
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress-bar-inner" id="progressInner"></div>
+      </div>
+
+      <div id="result" class="result-section"></div>
+      <div id="csvTableContainer" class="result-section"></div>
+      <div style="margin-top: 10px;">
+        <button onclick="downloadCSV(false)">下载完整 CSV</button>
+        <button onclick="downloadCSV(true)">仅下载 IP 列</button>
+      </div>
+    </div>
+
     </main>
   </div>
 </div>
@@ -170,6 +186,50 @@ function logout() {
     window.location.href = "{{ url_for('user.logout') }}";
   }
 }
+document.getElementById('targetFileInput').addEventListener('change', async function () {
+  const file = this.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  // 添加标识告诉后端这是目标文件
+  const res = await fetch("{{ url_for('asset.upload_file') }}?type=target", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await res.json();
+  if (data.status === "success") {
+    document.getElementById("targetInput").value = data.targets.join("\n");
+  } else {
+    alert("文件读取失败：" + data.message);
+  }
+});
+
+
+
+// 子域名字典上传
+document.getElementById('dictFileInput').addEventListener('change', async function () {
+  const file = this.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch("{{ url_for('asset.upload_file') }}", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await res.json();
+  if (data.status === "success") {
+    alert("子域名字典上传成功，后续将优先使用");
+  } else {
+    alert("字典上传失败：" + data.message);
+  }
+});
+
 
 document.getElementById('fileInput').addEventListener('change', async function () {
   const file = this.files[0];
@@ -233,17 +293,27 @@ async function pollProgress(taskId) {
 
       const assets = data.assets;
       window.latestAssets = assets;
+      
+      const html = assets.map(r => {
+        const subdomainList = r.subdomains?.length
+          ? '<ul style="margin: 5px 0 0 20px;">' +
+              r.subdomains.map(s => `<li>${s.subdomain} (${s.ip})</li>`).join('') +
+            '</ul>'
+          : '无';
 
-      const html = assets.map(r => `
-        <div class="result-box">
-          <strong>域名：</strong>${r.domain}<br>
-          <strong>IP：</strong>${r.ip || '无法解析'}<br>
-          <strong>WHOIS：</strong>${r.whois?.org || '未知'} / ${r.whois?.email || '无'} / ${r.whois?.creation_date || '无'}<br>
-          <strong>IP信息：</strong>${r.ip_info?.org || '无'} (${r.ip_info?.country || '无'}) ASN: ${r.ip_info?.asn || '无'}<br>
-          <strong>开放端口：</strong>
-          <div class="port-table">${formatPortsAsTable(r.ports)}</div>
-        </div>
-      `).join("");
+        return `
+          <div class="result-box">
+            <strong>域名：</strong>${r.domain}<br>
+            <strong>IP：</strong>${r.ip || '无法解析'}<br>
+            <strong>WHOIS：</strong>${r.whois?.org || '未知'} / ${r.whois?.email || '无'} / ${r.whois?.creation_date || '无'}<br>
+            <strong>IP信息：</strong>${r.ip_info?.org || '无'} (${r.ip_info?.country || '无'}) ASN: ${r.ip_info?.asn || '无'}<br>
+            <strong>开放端口：</strong>
+            <div class="port-table">${formatPortsAsTable(r.ports)}</div>
+            <strong>子域名：</strong>
+            ${subdomainList}
+          </div>
+        `;
+      }).join("");
 
       resultDiv.innerHTML = html;
       renderCSVTable(assets);
@@ -285,17 +355,32 @@ function renderCSVTable(assets) {
   const headers = ["域名", "IP", "WHOIS-组织", "WHOIS-邮箱", "WHOIS-注册时间", "ASN", "组织", "国家", "开放端口"];
   let html = `<table class="csv-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>`;
   for (let r of assets) {
-    html += `<tr>
-      <td>${r.domain || ""}</td>
-      <td>${r.ip || ""}</td>
-      <td>${r.whois?.org || ""}</td>
-      <td>${r.whois?.email || ""}</td>
-      <td>${r.whois?.creation_date || ""}</td>
-      <td>${r.ip_info?.asn || ""}</td>
-      <td>${r.ip_info?.org || ""}</td>
-      <td>${r.ip_info?.country || ""}</td>
-      <td><pre style="white-space:pre-wrap;">${r.ports || ""}</pre></td>
-    </tr>`;
+    const baseCols = [
+      r.domain || "",
+      r.ip || "",
+      r.whois?.org || "",
+      r.whois?.email || "",
+      r.whois?.creation_date || "",
+      r.ip_info?.asn || "",
+      r.ip_info?.org || "",
+      r.ip_info?.country || "",
+      (r.ports || "").replace(/\n/g, ' ')
+    ];
+
+    // 写主域名行
+    html += `<tr>${baseCols.map(c => `<td>${c}</td>`).join("")}</tr>`;
+
+    // 子域名扩展行（仅显示子域名 + IP）
+    if (r.subdomains && r.subdomains.length) {
+      for (const s of r.subdomains) {
+        const subCols = [
+          `↳ ${s.subdomain}`,  // 用箭头标记是子域名
+          s.ip || "",
+          "", "", "", "", "", "", "", ""  // 留空其他列
+        ];
+        html += `<tr>${subCols.map(c => `<td>${c}</td>`).join("")}</tr>`;
+      }
+    }
   }
   html += "</tbody></table>";
   document.getElementById("csvTableContainer").innerHTML = html;
@@ -326,6 +411,7 @@ async function downloadCSV(onlyIP) {
   a.remove();
   window.URL.revokeObjectURL(url);
 }
+
 </script>
 </body>
 </html>

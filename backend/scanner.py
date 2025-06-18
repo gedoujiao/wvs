@@ -73,7 +73,7 @@ def export_csv(task_id):
         return "任务不存在", 404
 
     # CSV 表头
-    output_str = "IP地址,地理位置,漏洞总数,高危漏洞数量,中危漏洞数量,低危漏洞数量\n"
+    output_str = "ip,省份,漏洞个数,高危个数,中危个数,低危个数\n"
     for item in task['results']:
         row = f"{item['target']},{item['province']},{item['vuln_count']}," \
               f"{item['severities'].get('high', 0)}," \
