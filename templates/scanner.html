@@ -2,75 +2,38 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>漏洞扫描 - Web漏洞扫描系统</title>
+  <title>Web漏洞扫描系统</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   <style>
-    body {
-      background-color: #f4f6f8;
-      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-    }
-    .scanner-panel {
-      padding: 30px;
-      margin: 30px;
-      background-color: #fff;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    }
-    .scanner-panel h2 {
-      font-size: 22px;
-      margin-bottom: 20px;
-      border-left: 5px solid #00bcd4;
-      padding-left: 10px;
-    }
-    .form-section {
-      margin-bottom: 20px;
-    }
-    input[type="file"],
-    textarea {
-      width: 100%;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
-      font-size: 14px;
-      transition: border 0.3s ease;
-    }
-    textarea {
-      height: 150px;
-      resize: vertical;
+    body { background-color: #f4f6f8; font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .scanner-panel { padding: 30px; margin: 30px; background-color: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+    .scanner-panel h2 { font-size: 22px; margin-bottom: 20px; border-left: 5px solid #00bcd4; padding-left: 10px; }
+    .form-section { margin-bottom: 20px; }
+    input[type="file"], textarea {
+      width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box;
+      font-size: 14px; transition: border 0.3s ease; resize: vertical;
     }
     button {
-      background-color: #00bcd4;
-      color: white;
-      padding: 10px 20px;
-      font-size: 15px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-right: 10px;
+      background-color: #00bcd4; color: white; padding: 10px 20px;
+      font-size: 15px; border: none; border-radius: 8px; cursor: pointer;
     }
-    .scan-results {
-      margin-top: 30px;
+    .progress-bar {
+      height: 20px; background-color: #e0e0e0; border-radius: 10px;
+      overflow: hidden; margin-top: 10px;
+    }
+    .progress-bar-fill {
+      height: 100%; background-color: #00bcd4; width: 0%; transition: width 0.5s ease;
     }
     .scan-results table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
+      width: 100%; border-collapse: collapse; margin-top: 20px;
     }
-    .scan-results th, .scan-results td {
-      padding: 10px;
-      border: 1px solid #ddd;
-      text-align: left;
+    th, td {
+      border: 1px solid #ddd; padding: 10px; text-align: left;
     }
-    .scan-results th {
-      background-color: #f7f7f7;
-    }
-    .status-ok {
-      color: green;
-    }
-    .status-alert {
-      color: red;
-    }
+    th { background-color: #f7f7f7; }
+    .status-ok { color: green; }
+    .status-alert { color: red; }
+    .details-row { background-color: #fafafa; font-size: 13px; }
   </style>
 </head>
 <body>
@@ -79,15 +42,15 @@
     <div class="system-title">Web漏洞扫描系统</div>
     <div class="user-box">
       <div class="avatar-container">
-        <img src="{{ url_for('static', filename='avatars/' + (avatar or 'avatar.png')) }}" alt="头像" class="avatar">
+        <img src="{{ url_for('static', filename='avatars/' + (session.avatar or 'avatar.png')) }}" alt="头像" class="avatar">
         <div class="user-tooltip">
-          <p>用户名: {{ username }}</p>
+          <p>用户名: {{ session.username }}</p>
           <p>登录次数: {{ login_count }}</p>
           <p>最近登录: {{ last_login }}</p>
-          <p>权限等级: {{ '管理员' if role == 'admin' else '普通用户' }}</p>
+          <p>权限等级: {{ '系统管理员' if session.role == 'admin' else '普通用户' }}</p>
         </div>
       </div>
-      <span class="username">{{ username }}</span>
+      <span class="username">{{ session.username }}</span>
       <button class="logout-btn" onclick="logout()">退出登录</button>
     </div>
   </header>
@@ -97,8 +60,7 @@
       <nav class="nav-menu">
         <a href="{{ url_for('index') }}" class="nav-item">🏠 首页</a>
         <a href="{{ url_for('asset.asset_page') }}" class="nav-item">💼 资产收集</a>
-        <a href="{{ url_for('scanner.scanner_home') }}" class="nav-item active">🔍 漏洞扫描</a>
-        <a href="#" class="nav-item">📄 报告生成</a>
+        <a href="{{ url_for('scanner.scanner_home') }}" class="nav-item active">🔍 漏洞扫描</a>            
         <a href="#" class="nav-item">📊 数据分析</a>
         <a href="{{ url_for('user.manage_users') }}" class="nav-item">👥 用户管理</a>
       </nav>
@@ -107,49 +69,54 @@
     <main class="main-panel">
       <div class="scanner-panel">
         <h2>🔍 漏洞扫描</h2>
-
-        <form id="scanForm" method="POST" enctype="multipart/form-data" action="{{ url_for('scanner.scanner_home') }}">
-
+        <form id="scanForm" method="POST" enctype="multipart/form-data">
           <div class="form-section">
             <label>上传 TXT / CSV 文件</label>
             <input type="file" name="target_file" accept=".txt,.csv" id="fileInput" />
           </div>
-
           <div class="form-section">
             <label>输入目标（支持域名或 IP:端口，换行分隔）</label>
-            <textarea name="manual_targets" placeholder="如：example.com:8080/example.com" id="manualTargets"></textarea>
+            <textarea name="manual_targets" placeholder="如：example.com:8080" id="manualTargets"></textarea>
           </div>
-
-          <div class="form-section">
-            <button type="submit">开始扫描</button>
-            <p id="scanStatusText" style="color: #666; margin-top: 10px;"></p> <!-- 提示正在扫描 -->
+          <button type="submit">开始扫描</button>
+          <button type="button" onclick="window.location.href='/scanner/'">🔄 新任务 / 刷新</button>
+          <div class="progress-bar" id="progressBar" style="display:none">
+            <div class="progress-bar-fill" id="progressFill"></div>
           </div>
+          <p id="scanStatusText"></p>
         </form>
 
         {% if results %}
         <div class="scan-results">
           <h3>扫描结果：</h3>
+          {% if task_id %}<a href="{{ url_for('scanner.export_csv', task_id=task_id) }}">📥 导出CSV</a>{% endif %}
           <table>
             <thead>
-              <tr>
-                <th>目标</th>
-                <th>漏洞总数</th>
-                <th>低危</th>
-                <th>中危</th>
-                <th>高危</th>
-                <th>严重</th>
-              </tr>
+              <tr><th>目标</th><th>省份</th><th>总数</th><th>低</th><th>中</th><th>高</th><th>严重</th></tr>
             </thead>
             <tbody>
               {% for r in results %}
               <tr>
                 <td>{{ r.target }}</td>
+                <td>{{ r.province }}</td>
                 <td class="{{ 'status-alert' if r.vuln_count > 0 else 'status-ok' }}">{{ r.vuln_count }}</td>
                 <td>{{ r.severities.low }}</td>
                 <td>{{ r.severities.medium }}</td>
                 <td>{{ r.severities.high }}</td>
                 <td>{{ r.severities.critical }}</td>
               </tr>
+              {% if r.details %}
+              <tr class="details-row">
+                <td colspan="7">
+                  <strong>漏洞详情：</strong>
+                  <ul>
+                    {% for d in r.details %}
+                    <li><strong>{{ d.name }}</strong> - {{ d.severity }} - {{ d.location }}</li>
+                    {% endfor %}
+                  </ul>
+                </td>
+              </tr>
+              {% endif %}
               {% endfor %}
             </tbody>
           </table>
@@ -162,47 +129,44 @@
 
 <script>
 function logout() {
-  if (confirm("确认退出登录？")) {
+  if (confirm("确定要退出登录吗？")) {
     window.location.href = "{{ url_for('user.logout') }}";
   }
 }
 
-// 自动填充文件内容到文本框
-document.getElementById('fileInput').addEventListener('change', function () {
+fileInput.addEventListener('change', function () {
   const file = this.files[0];
   if (!file) return;
-
   const reader = new FileReader();
   reader.onload = function (e) {
-    document.getElementById('manualTargets').value = e.target.result.trim();
+    manualTargets.value = e.target.result.trim();
   };
   reader.readAsText(file);
 });
 
-// 控制扫描提示 + 提交表单
-document.getElementById('scanForm').addEventListener('submit', function (e) {
-  e.preventDefault(); // 阻止默认提交，改为 JS 控制
+scanForm.addEventListener('submit', async function (e) {
+  e.preventDefault();
+  scanStatusText.textContent = '⏳ 正在启动扫描...';
+  progressBar.style.display = 'block';
 
-  // 显示提示文字
-  document.getElementById('scanStatusText').textContent = '🔍 正在扫描，请稍候...';
+  const formData = new FormData(scanForm);
+  const res = await fetch("{{ url_for('scanner.start_scan') }}", { method: 'POST', body: formData });
+  const data = await res.json();
+  const taskId = data.task_id;
 
-  // 使用 FormData 提交
-  const formData = new FormData(this);
-  fetch(this.action, {
-    method: 'POST',
-    body: formData
-  })
-    .then(res => res.text())
-    .then(html => {
-      document.open();
-      document.write(html);
-      document.close();
-    })
-    .catch(err => {
-      alert('提交失败：' + err.message);
-    });
+  const poll = setInterval(async () => {
+    const r = await fetch(`/scanner/progress/${taskId}`);
+    const p = await r.json();
+    progressFill.style.width = `${p.progress}%`;
+    scanStatusText.textContent = `进度: ${p.progress}% - 正在扫描目标：${p.current_target || '未知'}`;
+    if (p.status === 'finished') {
+      clearInterval(poll);
+      scanStatusText.textContent = '✅ 扫描完成，加载结果...';
+      setTimeout(() => {
+        location.href = `/scanner/results/${taskId}`;
+    }, 500); // 延迟 0.5 秒跳转
+  }}, 1000);
 });
 </script>
-
 </body>
 </html>

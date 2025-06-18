@@ -1,0 +1,29 @@
+[
+  {
+    "ip": "47.120.7.180",
+    "location": "中国 广东",
+    "vuln_count": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "raw": "[Nuclei 扫描失败] flag provided but not defined: -json\n"
+  },
+  {
+    "ip": "bbean.com",
+    "location": "美国 华盛顿州",
+    "vuln_count": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "raw": "[Nuclei 扫描失败] flag provided but not defined: -json\n"
+  },
+  {
+    "ip": "baidu.com",
+    "location": "中国 北京市",
+    "vuln_count": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "raw": "[Nuclei 扫描失败] flag provided but not defined: -json\n"
+  }
+]
