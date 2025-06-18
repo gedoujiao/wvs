@@ -454,31 +454,36 @@ class VulnerabilityHeatmapSystem:
 
     def add_global_map_layers(self, m):
         """添加全球地图图层"""
-        # 添加Esri世界地形图
-        try:
-            folium.TileLayer(
-                tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-                attr='&copy; <a href="https://www.esri.com/">Esri</a>',
-                name='Esri世界地形图 ⭐',
-                overlay=False,
-                control=True
-            ).add_to(m)
-            print(f"✅ 成功加载: Esri世界地形图")
-        except Exception as e:
-            print(f"⚠️ Esri世界地形图加载失败: {e}")
+        layers = [
+            ('Esri世界地形图',
+             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'),
+            ('Esri世界影像图',
+             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'),
+            ('CartoDB深色地图', 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'),
+            ('CartoDB浅色地图', 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png')
+        ]
 
-        # 添加Esri世界影像图
-        try:
-            folium.TileLayer(
-                tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                attr='&copy; <a href="https://www.esri.com/">Esri</a>',
-                name='Esri世界影像图',
-                overlay=False,
-                control=True
-            ).add_to(m)
-            print(f"✅ 成功加载: Esri世界影像图")
-        except Exception as e:
-            print(f"⚠️ Esri世界影像图加载失败: {e}")
+        for name, tiles in layers:
+            try:
+                if 'Esri' in name:
+                    folium.TileLayer(
+                        tiles=tiles,
+                        attr='&copy; <a href="https://www.esri.com/">Esri</a>',
+                        name=name,
+                        overlay=False,
+                        control=True
+                    ).add_to(m)
+                elif 'CartoDB' in name:
+                    folium.TileLayer(
+                        tiles=tiles,
+                        attr='&copy; <a href="https://carto.com/attributions">CARTO</a>',
+                        name=name,
+                        overlay=False,
+                        control=True,
+                        subdomains=['a', 'b', 'c', 'd']
+                    ).add_to(m)
+            except Exception:
+                continue
 
         # 添加OpenStreetMap
         try:
@@ -488,37 +493,8 @@ class VulnerabilityHeatmapSystem:
                 overlay=False,
                 control=True
             ).add_to(m)
-            print(f"✅ 成功加载: OpenStreetMap")
-        except Exception as e:
-            print(f"⚠️ OpenStreetMap加载失败: {e}")
-
-        # 添加CartoDB深色地图
-        try:
-            folium.TileLayer(
-                tiles='https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-                attr='&copy; <a href="https://carto.com/attributions">CARTO</a>',
-                name='CartoDB深色地图',
-                overlay=False,
-                control=True,
-                subdomains=['a', 'b', 'c', 'd']
-            ).add_to(m)
-            print(f"✅ 成功加载: CartoDB深色地图")
-        except Exception as e:
-            print(f"⚠️ CartoDB深色地图加载失败: {e}")
-
-        # 添加CartoDB浅色地图
-        try:
-            folium.TileLayer(
-                tiles='https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                attr='&copy; <a href="https://carto.com/attributions">CARTO</a>',
-                name='CartoDB浅色地图',
-                overlay=False,
-                control=True,
-                subdomains=['a', 'b', 'c', 'd']
-            ).add_to(m)
-            print(f"✅ 成功加载: CartoDB浅色地图")
-        except Exception as e:
-            print(f"⚠️ CartoDB浅色地图加载失败: {e}")
+        except Exception:
+            pass
 
     def add_global_legend(self, m, df, data_source):
         """添加全球图例"""
