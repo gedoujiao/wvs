@@ -45,8 +45,7 @@
 </head>
 <body>
 <div class="dashboard-container">
-
-    <!-- 顶部横条 -->
+     <!-- 顶部横条 -->
     <header class="topbar">
         <div class="system-title">Web漏洞扫描系统</div>
         <div class="user-box">
@@ -71,6 +70,7 @@
                 <a href="{{ url_for('index') }}" class="nav-item active">🏠 首页</a>
                 <a href="{{ url_for('asset.asset_page') }}" class="nav-item">💼 资产收集</a>
                 <a href="{{ url_for('scanner.scanner_home') }}" class="nav-item">🔍 漏洞扫描</a>
+                <a href="{{ url_for('visualization.index') }}" class="nav-item">🌍 全球热力图</a>
                 <a href="#" class="nav-item">📄 报告生成</a>
                 <a href="#" class="nav-item">📊 数据分析</a>
                 <a href="{{ url_for('user.manage_users') }}" class="nav-item">👥 用户管理</a>
@@ -96,6 +96,31 @@
                     <li>手动输入目标 IP 或者域名 / 上传 IP、域名的 CSV 或 TXT 文件</li>
                     <li>点击开始扫描</li>
                     <li>输出相关漏洞的表格，支持下载 CSV、或者纯 IP 地址 CSV</li>
+                </ul>
+
+                <h2>全球热力图</h2>
+                <blockquote>将漏洞扫描结果以交互式热力图形式展示在全球地图上</blockquote>
+                <ul>
+                    <li>上传包含漏洞数据的 CSV 文件（包含省份/州名、漏洞个数等信息）</li>
+                    <li>系统自动解析数据并在世界地图上生成热力图</li>
+                    <li>支持切换热力图/标记点显示模式，调节显示强度</li>
+                    <li>可以查看详细统计信息，导出可视化数据</li>
+                    <li>支持加载示例数据快速体验功能</li>
+                </ul>
+
+                <h2>CSV 文件格式说明</h2>
+                <blockquote>热力图功能支持的 CSV 文件格式要求</blockquote>
+                <p><strong>必需列：</strong></p>
+                <ul>
+                    <li><code>省份</code> - 地理位置名称（如：北京、上海、California等）</li>
+                    <li><code>漏洞个数</code> - 该地区的漏洞总数</li>
+                </ul>
+                <p><strong>可选列：</strong></p>
+                <ul>
+                    <li><code>ip</code> - IP地址</li>
+                    <li><code>高危个数</code> - 高危漏洞数量</li>
+                    <li><code>中危个数</code> - 中危漏洞数量</li>
+                    <li><code>低危个数</code> - 低危漏洞数量</li>
                 </ul>
             </div>
         </main>
